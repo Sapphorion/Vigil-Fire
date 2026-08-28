@@ -9,8 +9,8 @@
 <meta name="theme-color" content="#C8102E">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Fire Equip">
-<title>SANS 1475 Fire Equipment Register</title>
+<meta name="apple-mobile-web-app-title" content="Vigil">
+<title>Vigil</title>
 
 <!-- Firebase (compat SDK — works from a single static file, no build tools) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -102,6 +102,18 @@
   .tech-check{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:0.9rem;}
   .tech-check:last-child{border-bottom:none;}
 
+  .kv{display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--line); font-size:0.9rem;}
+  .kv:last-child{border-bottom:none;}
+  .kv .k{color:var(--grey); font-weight:700; text-transform:uppercase; font-size:0.72rem; letter-spacing:0.03em; flex-shrink:0;}
+  .kv .v{text-align:right;}
+  .insp-row{background:#fff; border:1px solid var(--line); border-left:5px solid var(--grey); border-radius:var(--radius); padding:12px 14px; margin-bottom:10px; cursor:pointer;}
+  .insp-row.status-pass{border-left-color:var(--green);}
+  .insp-row.status-fail{border-left-color:var(--red);}
+  .insp-row.status-due{border-left-color:var(--amber);}
+  .insp-row .top{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .insp-row .date{font-weight:800; font-size:0.95rem;}
+  .insp-row .sub{font-size:0.8rem; color:var(--grey); margin-top:3px;}
+
   .empty{text-align:center; padding:40px 20px; color:var(--grey);}
   .empty .big{font-size:2rem; margin-bottom:8px;}
 
@@ -131,6 +143,23 @@
   #authScreen h1{text-align:center; font-size:1.15rem;}
   #authScreen .sub{text-align:center; color:var(--grey); font-size:0.85rem; margin-bottom:6px;}
   #authError{color:var(--red-dark); font-size:0.82rem; margin-top:10px; display:none;}
+
+  /* Certificate */
+  .cert h1{font-size:1.15rem; margin-bottom:2px;}
+  .cert .co{font-size:0.85rem; color:var(--grey); line-height:1.4;}
+  .cert .meta{margin:12px 0; font-size:0.88rem; line-height:1.6;}
+  .cert table{width:100%; border-collapse:collapse; font-size:0.8rem; margin-top:8px;}
+  .cert th,.cert td{border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top;}
+  .cert th{background:var(--paper-dim);}
+  .cert .sign{margin-top:28px; font-size:0.85rem;}
+  .cert .sign .line{border-top:1px solid var(--ink); width:220px; margin-top:36px; padding-top:4px;}
+  @media print {
+    header.top, nav.bottom, #toast, .backbar, .btn, #syncPill { display:none !important; }
+    body { padding-bottom:0; background:#fff; }
+    main { max-width:none; padding:0; }
+    .view:not(.active){ display:none; }
+    .card { border:none; padding:0; margin:0; }
+  }
 </style>
 </head>
 <body>
@@ -139,8 +168,8 @@
 <div id="authScreen">
   <div class="card">
     <div class="logo">🔥</div>
-    <h1>SANS 1475 Fire Equipment Register</h1>
-    <div class="sub">Sign in to continue</div>
+    <h1>Vigil</h1>
+    <div class="sub">SANS 1475 fire equipment register</div>
     <label>Technician number or email</label>
     <input id="loginIdentifier" type="text" placeholder="Technician number or admin email">
     <label>Password</label>
@@ -157,7 +186,7 @@
     <div class="brand">
       <div class="mark">🔥</div>
       <div class="titles">
-        <div class="t1" id="headerTitle">Fire Equipment Register</div>
+        <div class="t1" id="headerTitle">Vigil</div>
         <div class="t2" id="headerSub">SANS 1475 field inspections</div>
       </div>
     </div>
@@ -208,9 +237,10 @@
         <button onclick="showView('view-sites')">←</button>
         <div><h2 id="siteDetailName">Site</h2><div class="hint" id="siteDetailAddress"></div></div>
       </div>
+
       <div class="card" id="completionStatusCard" style="display:none; padding:14px; background:var(--green-bg); border:1px solid var(--green);">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-          <div><strong style="color:var(--green);">✓ This site is complete</strong><div class="hint" style="margin-top:4px;">You can still add or edit equipment records.</div></div>
+          <div><strong style="color:var(--green);">✓ This site is complete</strong><div class="hint" style="margin-top:4px;">You can still add or edit equipment.</div></div>
           <button class="btn secondary" style="flex-shrink:0; white-space:nowrap;" onclick="toggleSiteCompletion()">Reopen</button>
         </div>
       </div>
@@ -222,55 +252,71 @@
       </div>
 
       <div id="activeSiteControls">
-        <button class="btn" onclick="openEquipmentForm(null)" style="margin-bottom:10px;">+ Add equipment record</button>
-        <button class="btn secondary" onclick="completeSite()" style="background:var(--green-bg); color:var(--green); border:1px solid var(--green); margin-bottom:10px;">✓ Complete this site</button>
+        <button class="btn" onclick="openAssetForm(null)" style="margin-bottom:10px;">+ Add equipment</button>
+        <button class="btn secondary" onclick="completeSite()" style="background:var(--green-bg); color:var(--green); border:1px solid var(--green);">✓ Complete this site</button>
       </div>
       <div class="divider"></div>
       <div id="equipmentList"></div>
     </section>
 
-    <!-- ===== EQUIPMENT FORM (shared) ===== -->
+    <!-- ===== EQUIPMENT (ASSET) DETAIL — identity + inspection history ===== -->
+    <section id="view-equipment-detail" class="view">
+      <div class="backbar"><button onclick="showView('view-site-detail')">←</button><h2 id="assetDetailTitle">Equipment</h2></div>
+      <div class="card">
+        <div id="assetIdentity"></div>
+        <div class="row" style="margin-top:14px;">
+          <button class="btn secondary" id="editAssetBtn" onclick="openAssetForm(currentEquipmentId)">Edit asset details</button>
+          <button class="btn" onclick="openInspectionForm(null)">+ Log inspection</button>
+        </div>
+        <button class="btn ghost" id="deleteAssetBtn" style="margin-top:10px; display:none;" onclick="deleteAsset()">Delete this asset</button>
+      </div>
+      <div class="section-title"><h2>Inspection history</h2></div>
+      <div id="inspectionList"></div>
+    </section>
+
+    <!-- ===== ASSET FORM — physical equipment identity only ===== -->
     <section id="view-equipment-form" class="view">
-      <div class="backbar"><button onclick="showView('view-site-detail')">←</button><h2 id="equipFormTitle">New equipment record</h2></div>
+      <div class="backbar"><button onclick="cancelAssetForm()">←</button><h2 id="assetFormTitle">New equipment</h2></div>
       <div class="card">
         <label>Equipment type</label>
-        <select id="eqType" onchange="onTypeChange()">
+        <select id="eqType">
           <option value="">Select type…</option>
-          <option value="1.5kg DCP">1.5kg DCP</option>
-          <option value="2kg DCP">2kg DCP</option>
-          <option value="4.5kg DCP">4.5kg DCP</option>
-          <option value="9kg DCP">9kg DCP</option>
-          <option value="2kg CO2">2kg CO₂</option>
-          <option value="5kg CO2">5kg CO₂</option>
-          <option value="10kg CO2">10kg CO₂</option>
-          <option value="9L Water">9L Water</option>
-          <option value="9L Foam">9L Foam</option>
-          <option value="Lithium">Lithium</option>
-          <option value="Hydrant">Hydrant</option>
-          <option value="Hose reel">Hose reel</option>
-          <option value="Siren">Siren</option>
-          <option value="Fire Blanket">Fire Blanket</option>
-          <option value="Trolley">Trolley</option>
-
+          <!-- options populated from EQUIPMENT_TYPES at startup -->
         </select>
         <div class="row">
-          <div><label>Weight</label><input id="eqSize" placeholder="e.g. 4.5 kg / 9 L"></div>
+          <div><label>Weight / size</label><input id="eqSize" placeholder="e.g. 4.5 kg / 9 L"></div>
           <div><label>Make</label><input id="eqMake" placeholder="e.g. SafeQuip, Centa, etc."></div>
         </div>
-        <div class="row">
-          <div><label>Asset tag / serial no.</label><input id="eqSerial" placeholder="e.g. FW-0231"></div>
-        </div>
+        <label>Asset tag / serial no.</label>
+        <input id="eqSerial" placeholder="e.g. FW-0231">
         <label>Location description</label>
         <input id="eqLocation" placeholder="e.g. Ground floor, near main exit, kitchen wall">
+        <label>Manufacture date</label>
+        <input id="eqMfgDate" type="date">
+        <div class="hint">This is the equipment itself. Service dates and checks are captured each time you log an inspection.</div>
+        <div class="row" style="margin-top:18px;">
+          <button class="btn secondary" onclick="cancelAssetForm()">Cancel</button>
+          <button class="btn" onclick="saveAsset()">Save</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INSPECTION FORM — one dated inspection event ===== -->
+    <section id="view-inspection-form" class="view">
+      <div class="backbar"><button onclick="showView('view-equipment-detail')">←</button><h2 id="inspFormTitle">Log inspection</h2></div>
+      <div class="card">
+        <label style="margin-top:0;">Equipment</label>
+        <div class="readonly-field" id="inspAssetDisplay">—</div>
+
         <div class="row">
-          <div><label>Manufacture date</label><input id="eqMfgDate" type="date"></div>
-          <div><label>Last service date</label><input id="eqServiceDate" type="date" onchange="onServiceDateChange()"></div>
+          <div><label>Service date</label><input id="eqServiceDate" type="date" onchange="onServiceDateChange()"></div>
+          <div><label>Inspection date</label><input id="eqInspDate" type="date"></div>
         </div>
         <div class="row">
           <div><label>Next service due</label><input id="eqNextDue" type="date"></div>
           <div><label>Pressure test due <span id="ptHint" style="text-transform:none;font-weight:500;"></span></label><input id="eqPressureTestDue" type="date"></div>
         </div>
-        <div class="hint">Next service auto-fills to 1 year after the service date (annual servicing per SANS 1475). Pressure test due auto-fills to 5 years (powder/foam/water) or 10 years (CO2) after service date.</div>
+        <div class="hint">Next service auto-fills to 1 year after the service date (annual servicing per SANS 1475). Pressure test due auto-fills to 5 years after the service date for powder, foam and water extinguishers, or 10 years for CO₂. Hydrants, hose reels, sirens and blankets get no auto-filled pressure-test date — set one manually if it applies.</div>
 
         <div class="divider"></div>
         <label style="margin-top:0;">Inspection checklist</label>
@@ -286,19 +332,18 @@
         <div class="divider"></div>
         <label>Technician</label>
         <div class="readonly-field" id="eqTechDisplay">—</div>
-        <label>Inspection date</label>
-        <input id="eqInspDate" type="date">
         <label>Notes</label>
         <textarea id="eqNotes" placeholder="Any additional observations"></textarea>
         <label>Photo (optional)</label>
         <input id="eqPhotoInput" type="file" accept="image/*" capture="environment" onchange="handlePhoto(event)">
         <img id="eqPhotoPreview" class="photo-preview" style="display:none;">
 
-        <div class="row" style="margin-top:18px;">
-          <button class="btn secondary" onclick="showView('view-site-detail')">Cancel</button>
-          <button class="btn" onclick="saveEquipment()">Save record</button>
+        <div id="inspReadonlyNote" class="hint" style="display:none; margin-top:14px;">Saved inspections can only be changed by an administrator.</div>
+        <div class="row" style="margin-top:18px;" id="inspFormButtons">
+          <button class="btn secondary" onclick="showView('view-equipment-detail')">Cancel</button>
+          <button class="btn" onclick="saveInspection()">Save inspection</button>
         </div>
-        <button class="btn ghost" id="deleteEqBtn" style="margin-top:10px; display:none;" onclick="deleteEquipment()">Delete this record</button>
+        <button class="btn ghost" id="deleteInspBtn" style="margin-top:10px; display:none;" onclick="deleteInspection()">Delete this inspection</button>
       </div>
     </section>
 
@@ -322,12 +367,12 @@
           <button class="btn secondary" onclick="showView('view-technicians')">Cancel</button>
           <button class="btn" onclick="saveTechnician()">Save technician</button>
         </div>
-        <button class="btn ghost" id="deleteTechBtn" style="margin-top:10px; display:none;" onclick="deleteTechnician(editingTechId)">Delete this technician</button>
-        <div class="hint" style="margin-top:10px;">Leave password blank when editing to keep the current password unchanged.</div>
+        <button class="btn ghost" id="deactivateTechBtn" style="margin-top:10px; display:none;">Deactivate this technician</button>
+        <div class="hint" style="margin-top:10px;">Deactivating blocks sign-in and clears site assignments but keeps the technician's inspection records for compliance history. Reactivate at any time. To fully remove the login, also disable the user in Firebase Console → Authentication.</div>
       </div>
     </section>
 
-    <!-- ===== EXPORT (shared) ===== -->
+    <!-- ===== EXPORT + COMPANY SETTINGS (shared; company card admin only) ===== -->
     <section id="view-export" class="view">
       <h2>Export records</h2>
       <p class="hint" style="font-size:0.85rem; margin-bottom:16px;">Export regularly to keep a filed backup of your compliance records.</p>
@@ -335,6 +380,27 @@
         <label style="margin-top:0;">Export scope</label>
         <select id="exportSiteFilter"></select>
         <button class="btn" style="margin-top:16px;" onclick="exportCSV()">Export as CSV (Excel-compatible)</button>
+      </div>
+
+      <div class="card" id="companySettingsCard" style="display:none;">
+        <h3 style="font-size:1rem;">Company details</h3>
+        <p class="hint" style="margin-top:2px;">Used as the letterhead on generated certificates.</p>
+        <label>Company name</label><input id="coName" placeholder="e.g. FireWorkx Fire Services">
+        <label>SAQCC / registration no.</label><input id="coReg" placeholder="e.g. SAQCC/F/CO/12345">
+        <label>Address</label><input id="coAddress" placeholder="Street, suburb, city">
+        <label>Phone</label><input id="coPhone" placeholder="e.g. 021 555 0100">
+        <label>Email</label><input id="coEmail" type="email" placeholder="e.g. admin@fireworkx.co.za">
+        <button class="btn" style="margin-top:16px;" onclick="saveCompanySettings()">Save company details</button>
+      </div>
+    </section>
+
+    <!-- ===== CERTIFICATE (rendered into a printable page) ===== -->
+    <section id="view-certificate" class="view">
+      <div class="backbar"><button onclick="showView('view-site-detail')">←</button><h2>Certificate</h2></div>
+      <div class="card"><div id="certContent"></div></div>
+      <div class="row" style="margin-top:6px;">
+        <button class="btn secondary" onclick="showView('view-site-detail')">Back</button>
+        <button class="btn" onclick="window.print()">Print / Save as PDF</button>
       </div>
     </section>
 
@@ -410,6 +476,12 @@ auth.onAuthStateChanged(async (user)=>{
     }
     currentProfile = doc.data();
     currentRole = currentProfile.role;
+    if(currentProfile.active === false){
+      document.getElementById('authError').style.display='block';
+      document.getElementById('authError').textContent = 'This account has been deactivated. Contact your administrator.';
+      await auth.signOut();
+      return;
+    }
   }catch(e){
     document.getElementById('authError').style.display='block';
     document.getElementById('authError').textContent = e.message;
@@ -452,20 +524,23 @@ function setupRoleUI(){
   document.getElementById('addSiteBtn').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('navTechnicians').style.display = isAdmin ? 'flex' : 'none';
   document.getElementById('sitesTitle').textContent = isAdmin ? 'All sites' : 'My sites';
-  document.getElementById('certBtn').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('companySettingsCard').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('navExport').style.display = isAdmin ? 'flex' : 'none';
 }
 
 /* ---------- View routing ---------- */
 let currentSiteId = null;
-let editingEquipmentId = null;
+let currentEquipmentId = null;   // asset currently being viewed
+let editingAssetId = null;       // asset being created/edited in the asset form
+let editingInspectionId = null;  // inspection being viewed/edited
 let editingSiteId = null;
 let editingTechId = null;
 
+const SITES_VIEWS = ['view-sites','view-site-form','view-site-detail','view-equipment-detail','view-equipment-form','view-inspection-form','view-certificate'];
 function showView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  document.getElementById('navSites').classList.toggle('active', ['view-sites','view-site-form','view-site-detail','view-equipment-form'].includes(id));
+  document.getElementById('navSites').classList.toggle('active', SITES_VIEWS.includes(id));
   document.getElementById('navTechnicians').classList.toggle('active', ['view-technicians','view-tech-form'].includes(id));
   document.getElementById('navExport').classList.toggle('active', id==='view-export');
   if(id==='view-sites') renderSites();
@@ -473,10 +548,11 @@ function showView(id){
 }
 
 /* ---------- Firestore listener bookkeeping ---------- */
-let unsubSites = null, unsubEquipment = null, unsubTechs = null;
+let unsubSites = null, unsubEquipment = null, unsubInspections = null, unsubTechs = null;
 function detachAllListeners(){
   if(unsubSites){ unsubSites(); unsubSites=null; }
   if(unsubEquipment){ unsubEquipment(); unsubEquipment=null; }
+  if(unsubInspections){ unsubInspections(); unsubInspections=null; }
   if(unsubTechs){ unsubTechs(); unsubTechs=null; }
 }
 
@@ -502,22 +578,34 @@ function paintSites(){
   }
   wrap.innerHTML = sitesCache.map(s=>{
     const editBtn = currentRole==='admin' ? `<span class="edit-ic" onclick="event.stopPropagation(); openSiteForm('${s.id}')">✏️</span>` : '';
-    const completedBadge = s.lastCompletedDate ? `<span class="pill pass" style="margin-left:6px;">✓ ${s.lastCompletedDate}</span>` : '';
+    const cat = siteCategoryLabel(s.category);
+    const badges = [
+      cat ? `<span class="pill">${cat}</span>` : '',
+      s.completed ? `<span class="pill pass">✓ Complete</span>` : '',
+      s.lastCompletedDate ? `<span class="pill">Last done ${escapeHtml(s.lastCompletedDate)}</span>` : ''
+    ].join(' ');
     return `<div class="card site-card" onclick="openSite('${s.id}')">
-      <div><div class="name">${escapeHtml(s.name)} ${completedBadge}</div><div class="meta">${escapeHtml(s.address||'No address on file')}</div></div>
+      <div>
+        <div class="name">${escapeHtml(s.name)}</div>
+        <div class="meta">${escapeHtml(s.address||'No address on file')}</div>
+        ${badges.trim() ? `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">${badges}</div>` : ''}
+      </div>
       <div style="display:flex; align-items:center;">${editBtn}</div>
     </div>`;
   }).join('');
 }
+function siteCategoryLabel(c){ return c==='survey' ? 'Survey' : (c==='servicing' ? 'Servicing' : ''); }
 
 function openSite(id){
   currentSiteId = id;
+  currentEquipmentId = null;
+  if(unsubInspections){ unsubInspections(); unsubInspections=null; }
   const site = sitesCache.find(s=>s.id===id);
   document.getElementById('siteDetailName').textContent = site ? site.name : '';
   document.getElementById('siteDetailAddress').textContent = site ? (site.address||'') : '';
   renderSiteCompletion(site);
-  showView('view-site-detail');
   updateSiteDetailCompletion();
+  showView('view-site-detail');
   loadEquipmentForSite(id);
 }
 
@@ -537,8 +625,8 @@ async function openSiteForm(id){
     document.getElementById('siteNameInput').value = site.name||'';
     document.getElementById('siteAddressInput').value = site.address||'';
     document.getElementById('siteNotesInput').value = site.notes||'';
+    document.getElementById('siteCategoryInput').value = site.category||'';
     assigned = site.assignedTo || [];
-    document.getElementById('siteCategoryInput').value = site.category || '';
   } else {
     document.getElementById('siteNameInput').value='';
     document.getElementById('siteAddressInput').value='';
@@ -566,10 +654,9 @@ async function saveSite(){
     name,
     address: document.getElementById('siteAddressInput').value.trim(),
     notes: document.getElementById('siteNotesInput').value.trim(),
+    category: document.getElementById('siteCategoryInput').value || '',
     assignedTo: checked
   };
-  // Site category: 'survey' | 'servicing' | ''
-  payload.category = document.getElementById('siteCategoryInput').value || '';
   try{
     if(editingSiteId){
       await db.collection('sites').doc(editingSiteId).update(payload);
@@ -592,14 +679,21 @@ async function deleteSite(){
   }catch(e){ toast('Error: ' + e.message); }
 }
 
+/* ---------- Site completion ----------
+   Two related markers:
+   - `completed` (bool): a workflow lock. Hides the "add equipment" controls and
+     unlocks the certificate. Reopenable.
+   - `lastCompletedDate` / `lastCompletedBy`: a dated record of the most recent
+     time the site was signed off, shown on the site list. */
 async function completeSite(){
   if(!currentSiteId) return;
-  if(!confirm('Mark this site as complete? You can still add or edit equipment records afterwards.')) return;
+  if(!confirm('Mark this site as complete? You can still add or edit equipment afterwards, and reopen it later.')) return;
   try{
     await db.collection('sites').doc(currentSiteId).update({
       completed: true,
       completedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    const site = sitesCache.find(s=>s.id===currentSiteId); if(site) site.completed = true;
     toast('Site marked as complete');
     updateSiteDetailCompletion();
   }catch(e){ toast('Error: ' + e.message); }
@@ -607,69 +701,139 @@ async function completeSite(){
 
 async function toggleSiteCompletion(){
   if(!currentSiteId) return;
+  const site = sitesCache.find(s=>s.id===currentSiteId);
   try{
-    const site = sitesCache.find(s=>s.id===currentSiteId);
-    if(site.completed){
+    if(site && site.completed){
       await db.collection('sites').doc(currentSiteId).update({ completed: false });
+      if(site) site.completed = false;
       toast('Site reopened');
     } else {
       await db.collection('sites').doc(currentSiteId).update({
-        completed: true,
-        completedAt: firebase.firestore.FieldValue.serverTimestamp()
+        completed: true, completedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      if(site) site.completed = true;
       toast('Site marked as complete');
     }
     updateSiteDetailCompletion();
   }catch(e){ toast('Error: ' + e.message); }
 }
+
 function renderSiteCompletion(site){
   const el = document.getElementById('siteCompletionStatus');
-  if(site && site.lastCompletedDate){
-    el.textContent = `Marked completed on ${site.lastCompletedDate} by ${site.lastCompletedBy||'—'}`;
-  } else {
-    el.textContent = 'Not yet marked as completed.';
-  }
+  if(!el) return;
+  el.textContent = (site && site.lastCompletedDate)
+    ? `Last signed off ${site.lastCompletedDate} by ${site.lastCompletedBy||'—'}`
+    : 'Not yet marked as completed.';
 }
 
 async function markSiteCompleted(){
   if(!currentSiteId) return;
   try{
-    const today = new Date().toISOString().slice(0,10);
+    const today = toLocalISO(new Date());
     await db.collection('sites').doc(currentSiteId).update({
-      lastCompletedDate: today,
-      lastCompletedBy: currentProfile.name
+      lastCompletedDate: today, lastCompletedBy: currentProfile.name
     });
-    toast('Site marked as completed');
     const site = sitesCache.find(s=>s.id===currentSiteId);
     if(site){ site.lastCompletedDate = today; site.lastCompletedBy = currentProfile.name; }
     renderSiteCompletion(site);
-    updateSiteDetailCompletion();
+    toast('Site signed off for today');
   }catch(e){ toast('Error: ' + e.message); }
 }
 
 function updateSiteDetailCompletion(){
   const site = sitesCache.find(s=>s.id===currentSiteId);
-  const statusCard = document.getElementById('completionStatusCard');
-  const activeControls = document.getElementById('activeSiteControls');
-  const certBtn = document.getElementById('certBtn');
-  const siteCompletionCard = document.getElementById('siteCompletionCard');
-  const siteCompletionStatus = document.getElementById('siteCompletionStatus');
-  if(site && site.completed){
-    if(statusCard) statusCard.style.display='block';
-    if(activeControls) activeControls.style.display='none';
-    if(certBtn) certBtn.style.display='block';
-    if(siteCompletionCard) siteCompletionCard.style.display='none';
-    if(siteCompletionStatus) siteCompletionStatus.textContent = 'This site was completed.';
-  } else {
-    if(statusCard) statusCard.style.display='none';
-    if(activeControls) activeControls.style.display='block';
-    if(certBtn) certBtn.style.display='none';
-    if(siteCompletionCard) siteCompletionCard.style.display='block';
-    if(siteCompletionStatus) siteCompletionStatus.textContent = 'Not yet marked as completed.';
-  }
+  const done = !!(site && site.completed);
+  const set = (id,disp)=>{ const el=document.getElementById(id); if(el) el.style.display=disp; };
+  set('completionStatusCard', done ? 'block' : 'none');
+  set('activeSiteControls',   done ? 'none'  : 'block');
+  set('certBtn',              (done && currentRole==='admin') ? 'block' : 'none');
 }
 
-/* ---------- Equipment ---------- */
+/* ---------- Company settings (certificate letterhead) ---------- */
+let companySettings = {};
+async function loadCompanySettings(){
+  try{
+    const doc = await db.collection('settings').doc('company').get();
+    companySettings = doc.exists ? doc.data() : {};
+  }catch(e){ companySettings = {}; }
+  const v = (id,key)=>{ const el=document.getElementById(id); if(el) el.value = companySettings[key]||''; };
+  v('coName','name'); v('coReg','reg'); v('coAddress','address'); v('coPhone','phone'); v('coEmail','email');
+}
+async function saveCompanySettings(){
+  companySettings = {
+    name: document.getElementById('coName').value.trim(),
+    reg: document.getElementById('coReg').value.trim(),
+    address: document.getElementById('coAddress').value.trim(),
+    phone: document.getElementById('coPhone').value.trim(),
+    email: document.getElementById('coEmail').value.trim(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  try{
+    await db.collection('settings').doc('company').set(companySettings, {merge:true});
+    toast('Company details saved');
+  }catch(e){ toast('Error: ' + e.message); }
+}
+
+/* ---------- Certificate ----------
+   Renders a printable compliance certificate for a site from each asset's
+   latest-inspection snapshot. Print / Save-as-PDF via the browser. */
+async function openCertificate(siteId){
+  const site = sitesCache.find(s=>s.id===siteId);
+  if(!site){ toast('Site not found'); return; }
+  toast('Building certificate…');
+  if(!companySettings.name) await loadCompanySettings();
+  let items = [];
+  try{
+    const snap = await db.collection('equipment').where('siteId','==', siteId).get();
+    items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }catch(e){ toast('Could not load equipment: ' + e.message); return; }
+  items.sort((a,b)=>(a.location||'').localeCompare(b.location||''));
+
+  const co = companySettings || {};
+  const today = toLocalISO(new Date());
+  const techName = items.find(i=>i.technicianName)?.technicianName || currentProfile.name || '';
+  const techSaqcc = items.find(i=>i.saqcc)?.saqcc || currentProfile.saqcc || '';
+  const rows = items.map(e=>`<tr>
+    <td>${escapeHtml(typeLabel(e.type))}</td>
+    <td>${escapeHtml(e.serial||'')}</td>
+    <td>${escapeHtml(e.location||'')}</td>
+    <td>${escapeHtml(e.serviceDate||'')}</td>
+    <td>${escapeHtml(e.nextServiceDue||'')}</td>
+    <td>${escapeHtml(e.pressureTestDue||'')}</td>
+    <td>${escapeHtml(statusLabel(e.status))}</td>
+  </tr>`).join('') || `<tr><td colspan="7">No equipment recorded at this site.</td></tr>`;
+
+  document.getElementById('certContent').innerHTML = `<div class="cert">
+    <h1>${escapeHtml(co.name || 'Fire Equipment Service Certificate')}</h1>
+    <div class="co">
+      ${co.reg ? 'Reg: '+escapeHtml(co.reg)+'<br>' : ''}
+      ${co.address ? escapeHtml(co.address)+'<br>' : ''}
+      ${[co.phone, co.email].filter(Boolean).map(escapeHtml).join(' · ')}
+    </div>
+    <h2 style="margin-top:16px; font-size:1rem;">Certificate of Service — Portable Fire Equipment (SANS 1475)</h2>
+    <div class="meta">
+      <strong>Site:</strong> ${escapeHtml(site.name)}<br>
+      ${site.address ? '<strong>Address:</strong> '+escapeHtml(site.address)+'<br>' : ''}
+      <strong>Date issued:</strong> ${today}<br>
+      ${site.lastCompletedDate ? '<strong>Work completed:</strong> '+escapeHtml(site.lastCompletedDate)+'<br>' : ''}
+      <strong>Equipment items:</strong> ${items.length}
+    </div>
+    <table>
+      <thead><tr><th>Type</th><th>Serial / tag</th><th>Location</th><th>Serviced</th><th>Next service</th><th>Pressure test</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="sign">
+      <div>I certify that the equipment listed above was inspected and serviced in accordance with SANS 1475.</div>
+      <div class="line">${escapeHtml(techName)}${techSaqcc ? ' — '+escapeHtml(techSaqcc) : ''}<br>Technician / signature &amp; date</div>
+    </div>
+  </div>`;
+  showView('view-certificate');
+}
+
+/* ---------- Equipment (assets) ----------
+   An asset doc holds identity + a denormalised snapshot of its latest
+   inspection (status, dates, technician) for list rendering. The full history
+   lives in the equipment/{id}/inspections subcollection. */
 let equipmentCache = [];
 
 function loadEquipmentForSite(siteId){
@@ -678,6 +842,11 @@ function loadEquipmentForSite(siteId){
     equipmentCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
     equipmentCache.sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
     paintEquipment();
+    // Keep the asset-detail view fresh if we're looking at one.
+    if(document.getElementById('view-equipment-detail').classList.contains('active') && currentEquipmentId){
+      paintAssetIdentity();
+      paintInspections();
+    }
   }, err=>{ toast('Could not load equipment: ' + err.message); });
 }
 
@@ -689,16 +858,19 @@ function paintEquipment(){
   }
   wrap.innerHTML = equipmentCache.map(e=>{
     const dueInfo = dueStatus(e);
-    const statusClass = e.status==='fail' ? 'fail' : (dueInfo.overdue ? 'due' : (e.status==='attention' ? 'due' : 'pass'));
-    return `<div class="tag-card status-${statusClass}" onclick="openEquipmentForm('${e.id}')">
+    const inspected = !!e.inspectionDate;
+    const statusClass = !inspected ? '' : (e.status==='fail' ? 'fail' : (dueInfo.overdue ? 'due' : (e.status==='attention' ? 'due' : 'pass')));
+    return `<div class="tag-card status-${statusClass}" onclick="openEquipmentDetail('${e.id}')">
       <div class="tag-hole"></div>
       <div class="tag-body">
-        <div class="type">${typeLabel(e.type)} ${e.size?('· '+escapeHtml(e.size)):''}${e.make?(' · '+escapeHtml(e.make)):''}</div>
-        <div class="sub">${escapeHtml(e.location||'No location noted')}${e.serial?(' · Tag '+escapeHtml(e.serial)):''} · ${escapeHtml(e.technicianName||'')}</div>
+        <div class="type">${escapeHtml(typeLabel(e.type))} ${e.size?('· '+escapeHtml(e.size)):''}${e.make?(' · '+escapeHtml(e.make)):''}</div>
+        <div class="sub">${escapeHtml(e.location||'No location noted')}${e.serial?(' · Tag '+escapeHtml(e.serial)):''}</div>
         <div class="pillrow">
-          <span class="pill ${e.status==='fail'?'fail':(e.status==='attention'?'due':'pass')}">${statusLabel(e.status)}</span>
-          ${e.nextServiceDue ? `<span class="pill ${dueInfo.serviceOverdue?'due':''}">Service due ${e.nextServiceDue}</span>` : ''}
-          ${e.pressureTestDue ? `<span class="pill ${dueInfo.pressureOverdue?'due':''}">Pressure test ${e.pressureTestDue}</span>` : ''}
+          ${inspected
+            ? `<span class="pill ${e.status==='fail'?'fail':(e.status==='attention'?'due':'pass')}">${statusLabel(e.status)}</span>`
+            : `<span class="pill">Not yet inspected</span>`}
+          ${e.nextServiceDue ? `<span class="pill ${dueInfo.serviceOverdue?'due':''}">Service due ${escapeHtml(e.nextServiceDue)}</span>` : ''}
+          ${e.pressureTestDue ? `<span class="pill ${dueInfo.pressureOverdue?'due':''}">Pressure test ${escapeHtml(e.pressureTestDue)}</span>` : ''}
         </div>
       </div>
     </div>`;
@@ -706,171 +878,428 @@ function paintEquipment(){
 }
 
 function dueStatus(e){
-  const today = new Date().toISOString().slice(0,10);
+  const today = toLocalISO(new Date());
   const serviceOverdue = e.nextServiceDue && e.nextServiceDue < today;
   const pressureOverdue = e.pressureTestDue && e.pressureTestDue < today;
   return {serviceOverdue, pressureOverdue, overdue: serviceOverdue || pressureOverdue};
 }
-function typeLabel(t){
-  const map = {CO2:'CO2 extinguisher','DCP-ABC':'DCP extinguisher (ABC)','DCP-BC':'DCP extinguisher (BC)',Foam:'Foam extinguisher',Water:'Water extinguisher',WetChem:'Wet chemical extinguisher',Blanket:'Fire blanket',HoseReel:'Fire hose reel'};
-  return map[t] || t;
-}
+function typeLabel(t){ return (EQUIPMENT_TYPES[t]||{}).label || t; }
 function statusLabel(s){ return s==='fail' ? 'Non-compliant' : (s==='attention' ? 'Needs attention' : 'Compliant'); }
 
-function siteCategoryLabel(c){ if(c==='survey') return 'Survey'; if(c==='servicing') return 'Servicing'; return ''; }
+/* ---------- Equipment types — single source of truth ----------
+   Keys are the values stored on each equipment record. Each entry drives the
+   type dropdown, the inspection checklist, the pressure-test interval and the
+   card label, so these four never drift apart again.
+   category  -> which CHECKLISTS entry to use (falls back to 'default')
+   ptYears   -> years after the service date to auto-fill "pressure test due"
+                (null = no auto-fill; set manually if it applies)              */
+const EQUIPMENT_TYPES = {
+  '1.5kg DCP':    { label:'1.5kg DCP',      category:'default',  ptYears:5 },
+  '2kg DCP':      { label:'2kg DCP',        category:'default',  ptYears:5 },
+  '4.5kg DCP':    { label:'4.5kg DCP',      category:'default',  ptYears:5 },
+  '9kg DCP':      { label:'9kg DCP',        category:'default',  ptYears:5 },
+  '2kg CO2':      { label:'2kg CO₂',        category:'co2',      ptYears:10 },
+  '5kg CO2':      { label:'5kg CO₂',        category:'co2',      ptYears:10 },
+  '10kg CO2':     { label:'10kg CO₂',       category:'co2',      ptYears:10 },
+  '9L Water':     { label:'9L Water',       category:'default',  ptYears:5 },
+  '9L Foam':      { label:'9L Foam',        category:'default',  ptYears:5 },
+  'Lithium':      { label:'Lithium (AVD)',  category:'default',  ptYears:5 },
+  'Trolley':      { label:'Trolley unit',   category:'default',  ptYears:5 },
+  'Hydrant':      { label:'Fire hydrant',   category:'hydrant',  ptYears:null },
+  'Hose reel':    { label:'Fire hose reel', category:'hosereel', ptYears:null },
+  'Siren':        { label:'Fire alarm siren', category:'siren',  ptYears:null },
+  'Fire Blanket': { label:'Fire blanket',   category:'blanket',  ptYears:null }
+};
+function populateTypeOptions(){
+  const sel = document.getElementById('eqType');
+  if(!sel || sel.dataset.populated) return;
+  sel.insertAdjacentHTML('beforeend', Object.entries(EQUIPMENT_TYPES)
+    .map(([code,t])=>`<option value="${escapeHtml(code)}">${escapeHtml(t.label)}</option>`).join(''));
+  sel.dataset.populated = '1';
+}
+function ptYearsFor(type){ return (EQUIPMENT_TYPES[type]||{}).ptYears || null; }
+function setPtHint(type){
+  const y = ptYearsFor(type);
+  document.getElementById('ptHint').textContent = y ? `(${y} yrs)` : '';
+}
 
-/* ---------- Checklist definitions per type ---------- */
+/* ---------- Checklist definitions per category ---------- */
 const CHECKLISTS = {
   default:[['gauge','Pressure gauge / indicator in operating (green) range'],['seal','Safety pin and tamper seal intact'],['damage','No visible damage, dents or corrosion to body'],['hose','Hose / nozzle free of cracks or blockage'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
-  CO2:[['weight','Weight check within manufacturer tolerance'],['seal','Safety pin and tamper seal intact'],['damage','No visible damage, dents or corrosion to body'],['hose','Horn / nozzle free of cracks or blockage'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
-  HoseReel:[['hose','Hose free of cracks, kinks or perishing'],['nozzle','Nozzle / valve operates freely, no leaks'],['reel','Reel winds and unwinds smoothly'],['pressure','Water pressure and flow adequate on test'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
-  Blanket:[['pouch','Pouch / container undamaged and sealed'],['pull','Pull tabs / release cords intact'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']]
+  co2:[['weight','Weight check within manufacturer tolerance'],['seal','Safety pin and tamper seal intact'],['damage','No visible damage, dents or corrosion to body'],['hose','Horn / nozzle free of cracks or blockage'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
+  hosereel:[['hose','Hose free of cracks, kinks or perishing'],['nozzle','Nozzle / valve operates freely, no leaks'],['reel','Reel winds and unwinds smoothly'],['pressure','Water pressure and flow adequate on test'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
+  blanket:[['pouch','Pouch / container undamaged and sealed'],['pull','Pull tabs / release cords intact'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
+  hydrant:[['valve','Isolating / landing valve opens and closes freely, no leaks'],['couplings','Outlet couplings and blank caps present and undamaged'],['damage','No visible corrosion, damage or paint deterioration'],['flow','Water pressure and flow adequate on test'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, accessible and correctly marked']],
+  siren:[['sound','Sounds correctly and at adequate volume on test'],['damage','No visible damage to unit or mounting'],['mount','Securely mounted, wiring and connections intact'],['power','Powers up / indicator normal'],['label','Service label present, legible and up to date'],['signage','Signage / operating instructions present and legible'],['access','Unobstructed and accessible']]
 };
 function getChecklistDef(type){
-  if(type==='CO2') return CHECKLISTS.CO2;
-  if(type==='HoseReel') return CHECKLISTS.HoseReel;
-  if(type==='Blanket') return CHECKLISTS.Blanket;
-  return CHECKLISTS.default;
+  const cat = (EQUIPMENT_TYPES[type]||{}).category;
+  return CHECKLISTS[cat] || CHECKLISTS.default;
 }
 let currentChecklistValues = {};
+let currentInspectionType = '';   // equipment type of the inspection being edited
+let inspectionReadOnly = false;
 function renderChecklist(type){
   const def = getChecklistDef(type);
   document.getElementById('checklistWrap').innerHTML = def.map(([key,label])=>{
     const val = currentChecklistValues[key] || null;
+    const dis = inspectionReadOnly ? 'disabled' : '';
     return `<div class="checklist-item"><div class="label">${label}</div>
       <div class="toggle">
-        <button type="button" class="${val==='pass'?'active pass':''}" onclick="setCheck('${key}','pass')">Pass</button>
-        <button type="button" class="${val==='fail'?'active fail':''}" onclick="setCheck('${key}','fail')">Fail</button>
+        <button type="button" ${dis} class="${val==='pass'?'active pass':''}" onclick="setCheck('${key}','pass')">Pass</button>
+        <button type="button" ${dis} class="${val==='fail'?'active fail':''}" onclick="setCheck('${key}','fail')">Fail</button>
       </div></div>`;
   }).join('');
 }
 function setCheck(key, val){
+  if(inspectionReadOnly) return;
   currentChecklistValues[key] = currentChecklistValues[key]===val ? null : val;
-  renderChecklist(document.getElementById('eqType').value);
+  renderChecklist(currentInspectionType);
 }
-function onTypeChange(){
-  const type = document.getElementById('eqType').value;
-  renderChecklist(type);
-  document.getElementById('ptHint').textContent = type==='CO2' ? '(10 yrs)' : (type ? '(5 yrs)' : '');
+function toLocalISO(dt){
+  return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
+function addYearsISO(iso, years){
+  const d = new Date(iso+'T00:00:00');
+  d.setFullYear(d.getFullYear()+years);
+  return toLocalISO(d);
 }
 function onServiceDateChange(){
   const d = document.getElementById('eqServiceDate').value;
   if(!d) return;
-  const type = document.getElementById('eqType').value;
-  const base = new Date(d+'T00:00:00');
-  const nextService = new Date(base); nextService.setFullYear(nextService.getFullYear()+1);
-  document.getElementById('eqNextDue').value = nextService.toISOString().slice(0,10);
-  const ptYears = type==='CO2' ? 10 : 5;
-  const pt = new Date(base); pt.setFullYear(pt.getFullYear()+ptYears);
-  document.getElementById('eqPressureTestDue').value = pt.toISOString().slice(0,10);
+  document.getElementById('eqNextDue').value = addYearsISO(d, 1);
+  const y = ptYearsFor(currentInspectionType);
+  if(y) document.getElementById('eqPressureTestDue').value = addYearsISO(d, y);
 }
 
-/* ---------- Equipment form ---------- */
+/* ---------- Asset form (equipment identity only) ---------- */
 let currentPhotoDataUrl = null;   // new photo pending upload
 let currentPhotoURL = null;       // existing uploaded photo URL
 
-function openEquipmentForm(id){
-  editingEquipmentId = id;
+function cancelAssetForm(){
+  showView(editingAssetId ? 'view-equipment-detail' : 'view-site-detail');
+}
+
+function openAssetForm(id){
+  populateTypeOptions();
+  editingAssetId = id;
+  document.getElementById('assetFormTitle').textContent = id ? 'Edit equipment' : 'New equipment';
+  const e = id ? equipmentCache.find(x=>x.id===id) : null;
+  document.getElementById('eqType').value = e ? (e.type||'') : '';
+  document.getElementById('eqSize').value = e ? (e.size||'') : '';
+  document.getElementById('eqMake').value = e ? (e.make||'') : '';
+  document.getElementById('eqSerial').value = e ? (e.serial||'') : '';
+  document.getElementById('eqLocation').value = e ? (e.location||'') : '';
+  document.getElementById('eqMfgDate').value = e ? (e.mfgDate||'') : '';
+  showView('view-equipment-form');
+}
+
+async function saveAsset(){
+  const type = document.getElementById('eqType').value;
+  if(!type){ toast('Select an equipment type'); return; }
+  const identity = {
+    type,
+    size: document.getElementById('eqSize').value.trim(),
+    make: document.getElementById('eqMake').value.trim(),
+    serial: document.getElementById('eqSerial').value.trim(),
+    location: document.getElementById('eqLocation').value.trim(),
+    mfgDate: document.getElementById('eqMfgDate').value || null
+  };
+  try{
+    if(editingAssetId){
+      await db.collection('equipment').doc(editingAssetId).update(identity);
+      toast('Equipment updated');
+      openEquipmentDetail(editingAssetId);
+    } else {
+      identity.siteId = currentSiteId;
+      identity.schemaVersion = 2;
+      identity.createdBy = currentUser.uid;
+      identity.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      const ref = await db.collection('equipment').add(identity);
+      toast('Equipment added — now log its first inspection');
+      openEquipmentDetail(ref.id);
+    }
+  }catch(e){ toast('Error saving: ' + e.message); }
+}
+
+async function deleteAsset(){
+  if(!currentEquipmentId || currentRole!=='admin') return;
+  const e = equipmentCache.find(x=>x.id===currentEquipmentId);
+  if(!confirm(`Delete ${e?typeLabel(e.type):'this equipment'} and its entire inspection history? This cannot be undone.`)) return;
+  try{
+    const inspSnap = await db.collection('equipment').doc(currentEquipmentId).collection('inspections').get();
+    let docs = inspSnap.docs.slice();
+    while(docs.length){                       // Firestore caps a batch at 500 writes
+      const batch = db.batch();
+      docs.splice(0,450).forEach(d=>batch.delete(d.ref));
+      await batch.commit();
+    }
+    await db.collection('equipment').doc(currentEquipmentId).delete();
+    toast('Equipment deleted');
+    showView('view-site-detail');
+  }catch(e){ toast('Error: ' + e.message); }
+}
+
+/* ---------- Asset detail: identity card + inspection history ---------- */
+let inspectionsCache = [];
+
+function openEquipmentDetail(id){
+  currentEquipmentId = id;
+  editingAssetId = id;   // so the asset form's back button returns here
+  inspectionsCache = [];
+  document.getElementById('inspectionList').innerHTML = '';
+  paintAssetIdentity();
+  if(unsubInspections) unsubInspections();
+  unsubInspections = db.collection('equipment').doc(id).collection('inspections')
+    .onSnapshot(snap=>{
+      inspectionsCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      inspectionsCache.sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
+      paintInspections();
+    }, err=>{ toast('Could not load inspection history: ' + err.message); });
+  showView('view-equipment-detail');
+  maybeMigrateAsset(id);
+}
+
+function paintAssetIdentity(){
+  const e = equipmentCache.find(x=>x.id===currentEquipmentId);
+  if(!e) return;
+  document.getElementById('assetDetailTitle').textContent = typeLabel(e.type);
+  document.getElementById('deleteAssetBtn').style.display = currentRole==='admin' ? 'block' : 'none';
+  const rows = [
+    ['Weight / size', e.size],
+    ['Make', e.make],
+    ['Asset tag / serial', e.serial],
+    ['Location', e.location],
+    ['Manufacture date', e.mfgDate]
+  ].filter(([,v])=>v);
+  document.getElementById('assetIdentity').innerHTML =
+    `<div class="kv"><span class="k">Type</span><span class="v">${escapeHtml(typeLabel(e.type))}</span></div>` +
+    rows.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v">${escapeHtml(v)}</span></div>`).join('');
+}
+
+function paintInspections(){
+  const wrap = document.getElementById('inspectionList');
+  const e = equipmentCache.find(x=>x.id===currentEquipmentId) || {};
+  let rows = inspectionsCache.slice();
+  // Un-migrated asset: show its inline inspection as a read-only legacy entry
+  // until maybeMigrateAsset() promotes it to a real doc.
+  if(e.schemaVersion !== 2 && e.inspectionDate){
+    rows.push({ id:'__legacy__', legacy:true, inspectionDate:e.inspectionDate, status:e.status,
+      technicianName:e.technicianName, nextServiceDue:e.nextServiceDue, pressureTestDue:e.pressureTestDue });
+    rows.sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
+  }
+  if(rows.length===0){
+    wrap.innerHTML = `<div class="empty">No inspections logged yet. Tap “+ Log inspection” above.</div>`;
+    return;
+  }
+  wrap.innerHTML = rows.map(i=>{
+    const dueInfo = dueStatus(i);
+    const cls = i.status==='fail' ? 'fail' : (dueInfo.overdue || i.status==='attention' ? 'due' : 'pass');
+    const onclick = i.legacy ? '' : `onclick="openInspectionForm('${i.id}')"`;
+    return `<div class="insp-row status-${cls}" ${onclick} style="${i.legacy?'cursor:default;opacity:0.7;':''}">
+      <div class="top">
+        <span class="date">${escapeHtml(i.inspectionDate||'—')}</span>
+        <span class="pill ${i.status==='fail'?'fail':(i.status==='attention'?'due':'pass')}">${statusLabel(i.status)}</span>
+      </div>
+      <div class="sub">${escapeHtml(i.technicianName||'')}${i.legacy?' · pre-history record':''}${i.nextServiceDue?` · next service ${escapeHtml(i.nextServiceDue)}`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+/* One-time, silent migration: promote an old asset's inline inspection fields
+   into the first entry of its inspections subcollection, then stamp schemaVersion 2. */
+async function maybeMigrateAsset(id){
+  const e = equipmentCache.find(x=>x.id===id);
+  if(!e || e.schemaVersion === 2 || !e.inspectionDate) return;
+  try{
+    const parentRef = db.collection('equipment').doc(id);
+    const inspRef = parentRef.collection('inspections').doc();
+    const batch = db.batch();
+    batch.set(inspRef, {
+      siteId: e.siteId, equipmentId: id,
+      inspectionDate: e.inspectionDate || null,
+      serviceDate: e.serviceDate || null,
+      nextServiceDue: e.nextServiceDue || null,
+      pressureTestDue: e.pressureTestDue || null,
+      checklist: e.checklist || {},
+      status: e.status || 'pass',
+      notes: e.notes || '',
+      photoURL: e.photoURL || null,
+      technicianId: e.technicianId || null,
+      technicianName: e.technicianName || '',
+      saqcc: e.saqcc || '',
+      migratedFromInline: true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    batch.update(parentRef, { schemaVersion: 2, lastInspectionId: inspRef.id });
+    await batch.commit();
+  }catch(err){ /* stays on the legacy display path; retried on next open */ }
+}
+
+/* ---------- Inspection form ---------- */
+function openInspectionForm(inspId){
+  const e = equipmentCache.find(x=>x.id===currentEquipmentId);
+  if(!e){ toast('Equipment not found'); return; }
+  editingInspectionId = inspId || null;
+  currentInspectionType = e.type || '';
   currentChecklistValues = {};
   currentPhotoDataUrl = null;
   currentPhotoURL = null;
   document.getElementById('eqPhotoInput').value='';
   const preview = document.getElementById('eqPhotoPreview');
   preview.style.display='none';
+  document.getElementById('inspAssetDisplay').textContent =
+    typeLabel(e.type) + (e.serial?(' · '+e.serial):'') + (e.location?(' · '+e.location):'');
 
-  if(id){
-    const e = equipmentCache.find(x=>x.id===id);
-    document.getElementById('equipFormTitle').textContent = 'Edit equipment record';
-    document.getElementById('deleteEqBtn').style.display='block';
-    currentChecklistValues = Object.assign({}, e.checklist || {});
-    document.getElementById('eqType').value = e.type || '';
-    document.getElementById('eqSize').value = e.size || '';
-    document.getElementById('eqMake').value = e.make || '';
-    document.getElementById('eqSerial').value = e.serial || '';
-    document.getElementById('eqLocation').value = e.location || '';
-    document.getElementById('eqMfgDate').value = e.mfgDate || '';
-    document.getElementById('eqServiceDate').value = e.serviceDate || '';
-    document.getElementById('eqNextDue').value = e.nextServiceDue || '';
-    document.getElementById('eqPressureTestDue').value = e.pressureTestDue || '';
-    document.getElementById('eqStatus').value = e.status || 'pass';
-    document.getElementById('eqInspDate').value = e.inspectionDate || '';
-    document.getElementById('eqNotes').value = e.notes || '';
-    document.getElementById('eqTechDisplay').textContent = e.technicianName + (e.saqcc ? (' · ' + e.saqcc) : '');
-    document.getElementById('ptHint').textContent = e.type==='CO2' ? '(10 yrs)' : (e.type ? '(5 yrs)' : '');
-    if(e.photoURL){ currentPhotoURL = e.photoURL; preview.src = e.photoURL; preview.style.display='block'; }
-    renderChecklist(e.type || '');
+  const i = inspId ? inspectionsCache.find(x=>x.id===inspId) : null;
+  inspectionReadOnly = !!(i && currentRole !== 'admin');
+
+  if(i){
+    document.getElementById('inspFormTitle').textContent = inspectionReadOnly ? 'Inspection' : 'Edit inspection';
+    currentChecklistValues = Object.assign({}, i.checklist || {});
+    document.getElementById('eqServiceDate').value = i.serviceDate || '';
+    document.getElementById('eqInspDate').value = i.inspectionDate || '';
+    document.getElementById('eqNextDue').value = i.nextServiceDue || '';
+    document.getElementById('eqPressureTestDue').value = i.pressureTestDue || '';
+    document.getElementById('eqStatus').value = i.status || 'pass';
+    document.getElementById('eqNotes').value = i.notes || '';
+    document.getElementById('eqTechDisplay').textContent = (i.technicianName||'') + (i.saqcc ? (' · ' + i.saqcc) : '');
+    if(i.photoURL){ currentPhotoURL = i.photoURL; preview.src = i.photoURL; preview.style.display='block'; }
   } else {
-    document.getElementById('equipFormTitle').textContent = 'New equipment record';
-    document.getElementById('deleteEqBtn').style.display='none';
-    ['eqType','eqSize','eqMake','eqSerial','eqLocation','eqMfgDate','eqServiceDate','eqNextDue','eqPressureTestDue','eqNotes'].forEach(idn=>document.getElementById(idn).value='');
-    document.getElementById('eqStatus').value='pass';
-    document.getElementById('eqInspDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('inspFormTitle').textContent = 'Log inspection';
+    ['eqServiceDate','eqInspDate','eqNextDue','eqPressureTestDue','eqNotes'].forEach(idn=>document.getElementById(idn).value='');
+    document.getElementById('eqStatus').value = 'pass';
+    document.getElementById('eqInspDate').value = toLocalISO(new Date());
     document.getElementById('eqTechDisplay').textContent = currentProfile.name + (currentProfile.saqcc ? (' · ' + currentProfile.saqcc) : '');
-    document.getElementById('ptHint').textContent='';
-    renderChecklist('');
   }
-  showView('view-equipment-form');
+  setPtHint(currentInspectionType);
+  renderChecklist(currentInspectionType);
+
+  ['eqServiceDate','eqInspDate','eqNextDue','eqPressureTestDue','eqStatus','eqNotes','eqPhotoInput'].forEach(idn=>{
+    document.getElementById(idn).disabled = inspectionReadOnly;
+  });
+  document.getElementById('inspFormButtons').style.display = inspectionReadOnly ? 'none' : 'flex';
+  document.getElementById('inspReadonlyNote').style.display = inspectionReadOnly ? 'block' : 'none';
+  document.getElementById('deleteInspBtn').style.display = (i && currentRole==='admin') ? 'block' : 'none';
+
+  showView('view-inspection-form');
 }
 
-async function saveEquipment(){
-  const type = document.getElementById('eqType').value;
-  if(!type){ toast('Select an equipment type'); return; }
-  const saveBtnRow = event ? event.target : null;
+async function saveInspection(){
+  if(inspectionReadOnly) return;
+  const e = equipmentCache.find(x=>x.id===currentEquipmentId);
+  if(!e){ toast('Equipment not found'); return; }
+  const parentRef = db.collection('equipment').doc(currentEquipmentId);
+  const existing = editingInspectionId ? inspectionsCache.find(x=>x.id===editingInspectionId) : null;
 
   let photoURL = currentPhotoURL;
   try{
     if(currentPhotoDataUrl){
       toast('Uploading photo…');
-      const ref = storage.ref('equipment-photos/' + currentSiteId + '_' + (editingEquipmentId || Date.now()) + '.jpg');
+      const ref = storage.ref('equipment-photos/' + currentEquipmentId + '_' + (editingInspectionId || Date.now()) + '.jpg');
       await ref.putString(currentPhotoDataUrl, 'data_url');
       photoURL = await ref.getDownloadURL();
     }
-  }catch(e){
-    toast('Photo upload failed, saving record without it: ' + e.message);
+  }catch(err){
+    toast('Photo upload failed, saving without it: ' + err.message);
     photoURL = currentPhotoURL;
   }
 
-  const record = {
-    siteId: currentSiteId,
-    type,
-    size: document.getElementById('eqSize').value.trim(),
-    make: document.getElementById('eqMake').value.trim(),
-    serial: document.getElementById('eqSerial').value.trim(),
-    location: document.getElementById('eqLocation').value.trim(),
-    mfgDate: document.getElementById('eqMfgDate').value,
-    serviceDate: document.getElementById('eqServiceDate').value,
-    nextServiceDue: document.getElementById('eqNextDue').value,
-    pressureTestDue: document.getElementById('eqPressureTestDue').value,
+  const inspData = {
+    siteId: e.siteId,
+    equipmentId: currentEquipmentId,
+    serviceDate: document.getElementById('eqServiceDate').value || null,
+    inspectionDate: document.getElementById('eqInspDate').value || null,
+    nextServiceDue: document.getElementById('eqNextDue').value || null,
+    pressureTestDue: document.getElementById('eqPressureTestDue').value || null,
     checklist: currentChecklistValues,
     status: document.getElementById('eqStatus').value,
-    inspectionDate: document.getElementById('eqInspDate').value,
     notes: document.getElementById('eqNotes').value.trim(),
     photoURL: photoURL || null,
-    technicianId: editingEquipmentId ? (equipmentCache.find(x=>x.id===editingEquipmentId)||{}).technicianId : currentUser.uid,
-    technicianName: editingEquipmentId ? (equipmentCache.find(x=>x.id===editingEquipmentId)||{}).technicianName : currentProfile.name,
-    saqcc: editingEquipmentId ? (equipmentCache.find(x=>x.id===editingEquipmentId)||{}).saqcc : (currentProfile.saqcc||''),
+    // A new inspection is attributed to whoever logs it. An admin editing an old
+    // one keeps the original technician's attribution.
+    technicianId: existing ? (existing.technicianId||null) : currentUser.uid,
+    technicianName: existing ? (existing.technicianName||'') : currentProfile.name,
+    saqcc: existing ? (existing.saqcc||'') : (currentProfile.saqcc||''),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
+
+  // The parent asset carries a denormalised copy of its latest inspection.
+  const snapshot = {
+    status: inspData.status, inspectionDate: inspData.inspectionDate, serviceDate: inspData.serviceDate,
+    nextServiceDue: inspData.nextServiceDue, pressureTestDue: inspData.pressureTestDue,
+    checklist: inspData.checklist, notes: inspData.notes, photoURL: inspData.photoURL,
+    technicianId: inspData.technicianId, technicianName: inspData.technicianName, saqcc: inspData.saqcc,
+    schemaVersion: 2, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
   try{
-    if(editingEquipmentId){
-      await db.collection('equipment').doc(editingEquipmentId).update(record);
-    } else {
-      record.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      await db.collection('equipment').add(record);
+    const batch = db.batch();
+    let parentPatch = null;   // fields to merge into the asset doc, if any
+
+    // If this asset still holds un-migrated inline inspection data, preserve it
+    // as a history entry before the new snapshot overwrites the parent fields.
+    if(e.schemaVersion !== 2 && e.inspectionDate){
+      batch.set(parentRef.collection('inspections').doc(), {
+        siteId: e.siteId, equipmentId: currentEquipmentId,
+        inspectionDate: e.inspectionDate||null, serviceDate: e.serviceDate||null,
+        nextServiceDue: e.nextServiceDue||null, pressureTestDue: e.pressureTestDue||null,
+        checklist: e.checklist||{}, status: e.status||'pass', notes: e.notes||'',
+        photoURL: e.photoURL||null, technicianId: e.technicianId||null,
+        technicianName: e.technicianName||'', saqcc: e.saqcc||'',
+        migratedFromInline: true, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      parentPatch = { schemaVersion: 2 };   // ensure the asset is marked migrated even if the snapshot below is skipped
     }
-    toast('Record saved');
-    showView('view-site-detail');
-  }catch(e){ toast('Error saving: ' + e.message); }
+
+    if(editingInspectionId){
+      batch.update(parentRef.collection('inspections').doc(editingInspectionId), inspData);
+      const others = inspectionsCache.filter(x=>x.id!==editingInspectionId);
+      if(others.every(o=>(o.inspectionDate||'') <= (inspData.inspectionDate||''))){
+        parentPatch = Object.assign({}, snapshot, { lastInspectionId: editingInspectionId });
+      }
+    } else {
+      const inspRef = parentRef.collection('inspections').doc();
+      inspData.createdBy = currentUser.uid;
+      inspData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      batch.set(inspRef, inspData);
+      if(inspectionsCache.every(o=>(o.inspectionDate||'') <= (inspData.inspectionDate||''))){
+        parentPatch = Object.assign({}, snapshot, { lastInspectionId: inspRef.id });
+      }
+    }
+    if(parentPatch) batch.update(parentRef, parentPatch);
+    await batch.commit();
+    toast('Inspection saved');
+    showView('view-equipment-detail');
+  }catch(err){ toast('Error saving: ' + err.message); }
 }
 
-async function deleteEquipment(){
-  if(!editingEquipmentId) return;
-  if(!confirm('Delete this equipment record? This cannot be undone.')) return;
+async function deleteInspection(){
+  if(!editingInspectionId || currentRole!=='admin') return;
+  if(!confirm('Delete this inspection from the history? This cannot be undone.')) return;
   try{
-    await db.collection('equipment').doc(editingEquipmentId).delete();
-    toast('Record deleted');
-    showView('view-site-detail');
-  }catch(e){ toast('Error: ' + e.message); }
+    const parentRef = db.collection('equipment').doc(currentEquipmentId);
+    await parentRef.collection('inspections').doc(editingInspectionId).delete();
+    // If we removed the latest, roll the asset snapshot back to the next newest.
+    const remaining = inspectionsCache.filter(x=>x.id!==editingInspectionId)
+      .sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
+    const latest = remaining[0];
+    if(latest){
+      await parentRef.update({
+        status: latest.status||'pass', inspectionDate: latest.inspectionDate||null,
+        serviceDate: latest.serviceDate||null, nextServiceDue: latest.nextServiceDue||null,
+        pressureTestDue: latest.pressureTestDue||null, checklist: latest.checklist||{},
+        notes: latest.notes||'', photoURL: latest.photoURL||null,
+        technicianId: latest.technicianId||null, technicianName: latest.technicianName||'',
+        saqcc: latest.saqcc||'', lastInspectionId: latest.id
+      });
+    } else {
+      const del = firebase.firestore.FieldValue.delete();
+      await parentRef.update({ status:del, inspectionDate:del, serviceDate:del, nextServiceDue:del, pressureTestDue:del, lastInspectionId:del });
+    }
+    toast('Inspection deleted');
+    showView('view-equipment-detail');
+  }catch(err){ toast('Error: ' + err.message); }
 }
 
 /* ---------- Photo handling (resized before upload) ---------- */
@@ -911,11 +1340,16 @@ function paintTechnicians(){
     wrap.innerHTML = `<div class="empty"><div class="big">👤</div>No technicians yet.</div>`;
     return;
   }
-  wrap.innerHTML = techsCache.map(t=>{
+  const ordered = techsCache.slice().sort((a,b)=>(a.active===false)-(b.active===false));
+  wrap.innerHTML = ordered.map(t=>{
+    const inactive = t.active === false;
     const assignedCount = sitesCache.filter(s=>(s.assignedTo||[]).includes(t.id)).length;
-    return `<div class="card tech-card" onclick="openTechForm('${t.id}')" style="cursor:pointer;">
+    const right = inactive
+      ? `<span class="pill" style="margin:0;">Deactivated</span>`
+      : `<div class="hint" style="margin:0;">${assignedCount} site${assignedCount===1?'':'s'}</div>`;
+    return `<div class="card tech-card" onclick="openTechForm('${t.id}')" style="cursor:pointer;${inactive?'opacity:0.55;':''}">
       <div><div class="name">${escapeHtml(t.name)}</div><div class="meta">Tech no. ${escapeHtml(t.techNumber||'')}${t.saqcc?(' · '+escapeHtml(t.saqcc)):''}</div></div>
-      <div class="hint" style="margin:0;">${assignedCount} site${assignedCount===1?'':'s'}</div>
+      ${right}
     </div>`;
   }).join('');
 }
@@ -925,12 +1359,20 @@ const TECH_EMAIL_DOMAIN = 'technicians.invalid';
 function openTechForm(id){
   editingTechId = id || null;
   document.getElementById('techFormTitle').textContent = id ? 'Edit technician' : 'New technician';
-  document.getElementById('deleteTechBtn').style.display = id ? 'block' : 'none';
+  const actionBtn = document.getElementById('deactivateTechBtn');
   const numberField = document.getElementById('techNumber');
   const passField = document.getElementById('techPassword');
   if(id){
     const t = techsCache.find(x=>x.id===id);
     if(!t){ toast('Technician not found'); return; }
+    actionBtn.style.display = 'block';
+    if(t.active === false){
+      actionBtn.textContent = 'Reactivate this technician';
+      actionBtn.onclick = ()=>reactivateTechnician(id);
+    } else {
+      actionBtn.textContent = 'Deactivate this technician';
+      actionBtn.onclick = ()=>deactivateTechnician(id);
+    }
     document.getElementById('techName').value = t.name||'';
     numberField.value = t.techNumber||'';
     numberField.disabled = true;
@@ -939,6 +1381,7 @@ function openTechForm(id){
     document.getElementById('techSaqcc').value = t.saqcc||'';
     document.getElementById('techPhone').value = t.phone||'';
   } else {
+    actionBtn.style.display = 'none';
     ['techName','techNumber','techPassword','techSaqcc','techPhone'].forEach(fid=>document.getElementById(fid).value='');
     numberField.disabled = false;
     document.getElementById('techPasswordHint').textContent = 'Share this technician number and password with the technician — they can log in immediately with it.';
@@ -983,39 +1426,34 @@ async function saveTechnician(){
   }catch(e){ toast('Error: ' + e.message); }
 }
 
-async function deleteTechnician(id){
+/* Deactivating keeps the technician's inspection records (they are compliance
+   history and must survive staff turnover). It blocks sign-in via the
+   `active:false` check in onAuthStateChanged and drops the technician from every
+   site's assignedTo, which also cuts their Firestore read access to those sites.
+   Fully deleting the Auth login still requires the Firebase Console. */
+async function deactivateTechnician(id){
   if(!id) return;
   const t = techsCache.find(x=>x.id===id);
-  if(!confirm(`Remove ${t?t.name:'this technician'}? This revokes their access and deletes all their data.`)) return;
+  if(!confirm(`Deactivate ${t?t.name:'this technician'}? They will no longer be able to sign in and will be removed from all site assignments. Their inspection records are kept for compliance history, and you can reactivate them later.`)) return;
   try{
     const batch = db.batch();
-    // Delete technician profile
-    batch.delete(db.collection('technicians').doc(id));
-    // Delete lookup record
-    if(t && t.techNumber){ batch.delete(db.collection('technicianLookup').doc(t.techNumber)); }
-    // Remove technician from all site assignments
+    batch.update(db.collection('technicians').doc(id), { active:false });
     sitesCache.forEach(site=>{
       if((site.assignedTo||[]).includes(id)){
-        const updated = site.assignedTo.filter(tid=>tid!==id);
-        batch.update(db.collection('sites').doc(site.id), {assignedTo: updated});
+        batch.update(db.collection('sites').doc(site.id), {assignedTo: site.assignedTo.filter(tid=>tid!==id)});
       }
     });
-    // Delete all equipment records assigned to this technician
-    const eqSnap = await db.collection('equipment').where('technicianId','==',id).get();
-    eqSnap.docs.forEach(doc=>{ batch.delete(db.collection('equipment').doc(doc.id)); });
-    // Commit batch
     await batch.commit();
-    // Delete Firebase Auth user (if password known, can delete; otherwise skip)
-    try{
-      const secondaryApp = firebase.initializeApp(firebaseConfig, 'DeleteAuth_' + Date.now());
-      const email = `tech${t.techNumber}@${TECH_EMAIL_DOMAIN}`;
-      try{
-        // Auth users created with this email can only be deleted from console or via admin SDK
-        // This attempt will fail, but we've already removed access at Firestore level
-      }catch(authErr){ }
-      try{ await secondaryApp.auth().signOut(); await secondaryApp.delete(); }catch(e){}
-    }catch(appErr){}
-    toast('Technician and all data removed');
+    toast('Technician deactivated');
+    showView('view-technicians');
+  }catch(e){ toast('Error: ' + e.message); }
+}
+
+async function reactivateTechnician(id){
+  if(!id) return;
+  try{
+    await db.collection('technicians').doc(id).update({ active:true });
+    toast('Technician reactivated — reassign them to sites as needed');
     showView('view-technicians');
   }catch(e){ toast('Error: ' + e.message); }
 }
@@ -1030,37 +1468,69 @@ async function exportCSV(){
   const siteIds = filter==='all' ? sitesCache.map(s=>s.id) : [filter];
   if(siteIds.length===0){ toast('No sites to export'); return; }
   toast('Gathering records…');
-  let allRows = [];
+
+  // One row per inspection (full compliance history), plus a blank-inspection
+  // row for any asset that has never been inspected.
+  const rows = [];
   for(const sid of siteIds){
-    const snap = await db.collection('equipment').where('siteId','==', sid).get();
-    allRows = allRows.concat(snap.docs.map(d=>({id:d.id, ...d.data()})));
+    const site = sitesCache.find(s=>s.id===sid);
+    const eqSnap = await db.collection('equipment').where('siteId','==', sid).get();
+    for(const d of eqSnap.docs){
+      const e = { id:d.id, ...d.data() };
+      const inspSnap = await db.collection('equipment').doc(e.id).collection('inspections').get();
+      let inspections = inspSnap.docs.map(x=>({id:x.id, ...x.data()}));
+      if(inspections.length===0 && e.inspectionDate){
+        inspections = [{ inspectionDate:e.inspectionDate, serviceDate:e.serviceDate, nextServiceDue:e.nextServiceDue,
+          pressureTestDue:e.pressureTestDue, status:e.status, checklist:e.checklist, notes:e.notes,
+          technicianName:e.technicianName, saqcc:e.saqcc }];
+      }
+      if(inspections.length===0) inspections = [{}];
+      inspections.sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
+      for(const i of inspections){
+        const checklistStr = Object.entries(i.checklist||{}).map(([k,v])=>`${k}:${v}`).join('; ');
+        rows.push([
+          site?site.name:'', typeLabel(e.type), e.size, e.make, e.serial, e.location, e.mfgDate,
+          i.inspectionDate||'', i.serviceDate||'', i.nextServiceDue||'', i.pressureTestDue||'',
+          i.status?statusLabel(i.status):'', checklistStr, i.technicianName||'', i.saqcc||'', i.notes||''
+        ]);
+      }
+    }
   }
-  if(allRows.length===0){ toast('No records to export'); return; }
-  const headers = ['Site','Type','Size','Make','Asset Tag / Serial','Location','Manufacture Date','Last Service Date','Next Service Due','Pressure Test Due','Overall Status','Checklist','Technician','SAQCC No.','Inspection Date','Notes'];
-  const lines = [headers.join(',')];
-  allRows.forEach(e=>{
-    const site = sitesCache.find(s=>s.id===e.siteId);
-    const checklistStr = Object.entries(e.checklist||{}).map(([k,v])=>`${k}:${v}`).join('; ');
-    const vals = [site?site.name:'', typeLabel(e.type), e.size, e.make, e.serial, e.location, e.mfgDate, e.serviceDate, e.nextServiceDue, e.pressureTestDue, statusLabel(e.status), checklistStr, e.technicianName, e.saqcc, e.inspectionDate, e.notes].map(csvEscape);
-    lines.push(vals.join(','));
-  });
-  const csv = lines.join('\r\n');
+  if(rows.length===0){ toast('No records to export'); return; }
+
+  const headers = ['Site','Type','Size','Make','Asset Tag / Serial','Location','Manufacture Date','Inspection Date','Service Date','Next Service Due','Pressure Test Due','Overall Status','Checklist','Technician','SAQCC No.','Notes'];
+  const lines = [headers.map(csvEscape).join(',')].concat(rows.map(r=>r.map(csvEscape).join(',')));
+  const csv = String.fromCharCode(0xFEFF) + lines.join('\r\n');   // BOM so Excel reads UTF-8
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const scopeName = filter==='all' ? 'all-sites' : (sitesCache.find(s=>s.id===filter)?.name||'site').replace(/[^a-z0-9]+/gi,'-').toLowerCase();
-  a.href = url; a.download = `fire-equipment-${scopeName}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.href = url; a.download = `fire-equipment-${scopeName}-${toLocalISO(new Date())}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   toast('CSV downloaded');
 }
 function csvEscape(v){
   v = (v===undefined || v===null) ? '' : String(v);
-  if(/[",\n]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
+  if(/^[=+\-@\t\r]/.test(v)) v = "'" + v;          // neutralise spreadsheet formula injection
+  if(/[",\n\r]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
   return v;
 }
-function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeHtml(s){
+  if(s===undefined || s===null || s==='') return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
+/* ---------- Startup ---------- */
+populateTypeOptions();
 updateSyncPill();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.warn('Service worker registration failed:', err));
+  });
+}
 </script>
 </body>
 </html>

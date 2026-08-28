@@ -1,6 +1,7 @@
 {
-  "name": "Fire Equipment Register",
-  "short_name": "Fire Equip",
+  "name": "Vigil",
+  "short_name": "Vigil",
+  "description": "SANS 1475 fire equipment register and field inspections",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#FAF9F6",

@@ -25,25 +25,42 @@ service cloud.firestore {
     }
 
     match /sites/{siteId} {
-      // Read: admins or assigned technicians
       allow read: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.assignedTo);
-
-      // Create & delete reserved for admins
-      allow create: if isAdmin();
-      allow delete: if isAdmin();
-
-      // Updates: admins may update anything; assigned technicians may only update a restricted set of fields
+      allow create, delete: if isAdmin();
+      // Admins may change anything. An assigned technician may only touch a
+      // restricted set of fields (site details + completion markers).
       allow update: if isAdmin()
         || (
           isSignedIn()
           && request.auth.uid in resource.data.assignedTo
-          && request.resource.data.keys().hasOnly(['name', 'address', 'notes', 'category', 'assignedTo', 'completed', 'completedAt', 'lastCompletedDate', 'lastCompletedBy', 'createdAt'])
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['name','address','notes','category','assignedTo','completed','completedAt','lastCompletedDate','lastCompletedBy'])
         );
     }
 
+    // Company letterhead / registration details used on generated certificates.
+    match /settings/{doc} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // An "equipment" doc is the physical asset (type, serial, location) plus a
+    // denormalised snapshot of its most recent inspection for list rendering.
     match /equipment/{eqId} {
-      allow read, update, delete: if isAdmin() || (isSignedIn() && isAssignedToSite(resource.data.siteId));
+      allow read:   if isAdmin() || (isSignedIn() && isAssignedToSite(resource.data.siteId));
       allow create: if isAdmin() || (isSignedIn() && isAssignedToSite(request.resource.data.siteId));
+      allow update: if isAdmin() || (isSignedIn() && isAssignedToSite(resource.data.siteId));
+      allow delete: if isAdmin();
+
+      // Each inspection is an immutable-by-technicians history entry. It carries
+      // its own siteId (copied from the parent) so this rule needs no nested
+      // lookup of the equipment doc. Technicians assigned to the site can log
+      // new inspections; only an admin may edit or delete a saved one.
+      match /inspections/{inspId} {
+        allow read:   if isAdmin() || (isSignedIn() && isAssignedToSite(resource.data.siteId));
+        allow create: if isAdmin() || (isSignedIn() && isAssignedToSite(request.resource.data.siteId));
+        allow update, delete: if isAdmin();
+      }
     }
   }
 }
