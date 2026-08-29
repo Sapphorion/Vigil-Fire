@@ -1,10 +1,10 @@
-# Setup guide — Vigil
+# Setup guide — Vigil Fire
 
 One-time setup, roughly 10-15 minutes. You'll need a Google account.
 
 ## 1. Create a Firebase project
 1. Go to https://console.firebase.google.com
-2. Click **Add project**, give it a name (e.g. "FireWorkx Equipment Register")
+2. Click **Add project**, give it a name (e.g. "Fire Equipment Register")
 3. You can disable Google Analytics for this project — not needed
 4. Click **Create project**
 
@@ -78,7 +78,7 @@ You're now the administrator. From here, use the **Techs** tab to create technic
 - The free Firebase tier (Spark plan) comfortably covers this scale of use — you'd need a genuinely high volume of daily records before hitting any limits.
 - Technicians' devices cache data locally, so they can keep working with no signal on-site; anything they add or edit syncs automatically once they're back in range. This needs the app to be hosted (see step 7) and opened online once first.
 - Removing a technician **deactivates** them: they can no longer sign in and they're dropped from every site, but their past inspection records are kept as compliance history. You can reactivate them later from the same screen. To also delete the underlying login, do it in Firebase Console → Authentication → Users.
-- When you change `index.html` or `sw.js`, bump the `CACHE` name near the top of `sw.js` (e.g. `vigil-v1` → `vigil-v2`) and redeploy, so devices pick up the new version instead of serving the old cached one.
+- When you change `index.html` or `sw.js`, bump the `CACHE` name near the top of `sw.js` (e.g. `vigil-fire-v1` → `vigil-fire-v2`) and redeploy, so devices pick up the new version instead of serving the old cached one.
 - **After updating `firestore.rules`, you must re-publish it** (Firebase Console → Firestore Database → Rules → paste → Publish). The app now stores each inspection as its own record under `equipment/{id}/inspections/{id}`, and the rules that allow technicians to log inspections live in that file.
 - Each piece of equipment keeps a full inspection history. Logging a new inspection never overwrites an older one. Technicians can add inspections for their assigned sites; only an administrator can edit or delete a saved inspection, or delete a piece of equipment. Older records created before this change are migrated automatically the first time someone opens that equipment.
 - Sites can be given a category (Survey / Servicing). **Complete this site** does two things at once: it flips a workflow lock that unlocks the certificate, and it stamps a dated sign-off ("Signed off <date> by <name>", shown on the site list). Reopening clears the lock but keeps the last sign-off date as history. Equipment can be added or edited whether the site is complete or not.

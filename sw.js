@@ -1,4 +1,4 @@
-/* Service worker for Vigil (SANS 1475 fire equipment register).
+/* Service worker for Vigil Fire (SANS 1475 fire equipment register).
 
    Purpose: let a technician open the app on-site with no signal. Firestore's
    own offline persistence caches the *data*, but without this worker the
@@ -15,7 +15,7 @@
    Bump CACHE (e.g. -v2) whenever index.html or sw.js changes so clients pick
    up the new version. */
 
-const CACHE = 'vigil-v2';
+const CACHE = 'vigil-fire-v1';
 
 const LOCAL_SHELL = [
   './index.html',
