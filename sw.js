@@ -15,7 +15,7 @@
    Bump CACHE (e.g. -v2) whenever index.html or sw.js changes so clients pick
    up the new version. */
 
-const CACHE = 'vigil-v1';
+const CACHE = 'vigil-v2';
 
 const LOCAL_SHELL = [
   './index.html',

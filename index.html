@@ -90,11 +90,14 @@
   .tag-card .tag-body{padding:14px 44px 14px 16px;}
   .tag-card .type{font-weight:800; font-size:0.98rem;}
   .tag-card .sub{font-size:0.8rem; color:var(--grey); margin-top:2px;}
-  .tag-card .pillrow{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+  .pillrow{display:flex; gap:6px; flex-wrap:wrap;}
+  .tag-card .pillrow{margin-top:10px;}
   .pill{font-size:0.68rem; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--paper-dim); color:var(--grey); text-transform:uppercase; letter-spacing:0.03em;}
   .pill.pass{background:var(--green-bg); color:var(--green);}
   .pill.fail{background:#FBE1E4; color:var(--red-dark);}
   .pill.due{background:var(--amber-bg); color:var(--amber);}
+  .chip{font-size:0.75rem; font-weight:700; padding:6px 12px; border-radius:999px; background:var(--paper-dim); color:var(--grey); border:1px solid var(--line); cursor:pointer;}
+  .chip.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
 
   .tech-card{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; margin-bottom:10px;}
   .tech-card .name{font-weight:800; font-size:0.98rem;}
@@ -144,9 +147,12 @@
   #authScreen .sub{text-align:center; color:var(--grey); font-size:0.85rem; margin-bottom:6px;}
   #authError{color:var(--red-dark); font-size:0.82rem; margin-top:10px; display:none;}
 
-  /* Certificate */
+  /* Certificate + printable register */
   .cert h1{font-size:1.15rem; margin-bottom:2px;}
+  .cert .logo{display:block; max-height:70px; max-width:220px; margin-bottom:10px; object-fit:contain;}
   .cert .co{font-size:0.85rem; color:var(--grey); line-height:1.4;}
+  .logo-box{display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--paper); margin-top:6px;}
+  .logo-box img{max-height:56px; max-width:140px; object-fit:contain;}
   .cert .meta{margin:12px 0; font-size:0.88rem; line-height:1.6;}
   .cert table{width:100%; border-collapse:collapse; font-size:0.8rem; margin-top:8px;}
   .cert th,.cert td{border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top;}
@@ -159,6 +165,8 @@
     main { max-width:none; padding:0; }
     .view:not(.active){ display:none; }
     .card { border:none; padding:0; margin:0; }
+    .cert table { font-size:0.72rem; }
+    .cert th, .cert td { padding:4px 6px; }
   }
 </style>
 </head>
@@ -238,23 +246,24 @@
         <div><h2 id="siteDetailName">Site</h2><div class="hint" id="siteDetailAddress"></div></div>
       </div>
 
-      <div class="card" id="completionStatusCard" style="display:none; padding:14px; background:var(--green-bg); border:1px solid var(--green);">
+      <div class="card" id="siteCompletionCard" style="padding:14px 16px;"></div>
+
+      <button class="btn secondary" style="margin-bottom:14px;" onclick="openRegister(currentSiteId)">🖨 Printable register</button>
+
+      <div class="card" id="serviceRunCard" style="display:none; padding:12px 16px;">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-          <div><strong style="color:var(--green);">✓ This site is complete</strong><div class="hint" style="margin-top:4px;">You can still add or edit equipment.</div></div>
-          <button class="btn secondary" style="flex-shrink:0; white-space:nowrap;" onclick="toggleSiteCompletion()">Reopen</button>
+          <div><strong>Service run</strong><div class="hint" id="serviceRunSummary" style="margin:2px 0 0 0;"></div></div>
+          <button class="btn secondary" style="flex-shrink:0; width:auto; white-space:nowrap;" onclick="startServiceRun()">▶ Start</button>
         </div>
       </div>
-      <button class="btn secondary" id="certBtn" style="margin-top:10px; display:none;" onclick="openCertificate(currentSiteId)">🖨 Generate certificate</button>
 
-      <div class="card" id="siteCompletionCard" style="padding:12px 16px;">
-        <div id="siteCompletionStatus" class="hint" style="margin:0;">Not yet marked as completed.</div>
-        <button class="btn secondary" style="margin-top:10px;" onclick="markSiteCompleted()">✓ Mark site as completed</button>
+      <button class="btn" onclick="openAssetForm(null)" style="margin-bottom:10px;">+ Add equipment</button>
+
+      <div id="equipFilterBar" style="display:none; margin-bottom:12px;">
+        <input id="equipSearch" placeholder="Search type, tag or location…" oninput="paintEquipment()" style="margin-bottom:8px;">
+        <div class="pillrow" id="equipFilterChips"></div>
       </div>
 
-      <div id="activeSiteControls">
-        <button class="btn" onclick="openAssetForm(null)" style="margin-bottom:10px;">+ Add equipment</button>
-        <button class="btn secondary" onclick="completeSite()" style="background:var(--green-bg); color:var(--green); border:1px solid var(--green);">✓ Complete this site</button>
-      </div>
       <div class="divider"></div>
       <div id="equipmentList"></div>
     </section>
@@ -303,7 +312,14 @@
 
     <!-- ===== INSPECTION FORM — one dated inspection event ===== -->
     <section id="view-inspection-form" class="view">
-      <div class="backbar"><button onclick="showView('view-equipment-detail')">←</button><h2 id="inspFormTitle">Log inspection</h2></div>
+      <div class="backbar"><button onclick="exitInspectionForm()">←</button><h2 id="inspFormTitle">Log inspection</h2></div>
+      <div id="serviceRunBanner" style="display:none; align-items:center; justify-content:space-between; gap:10px; background:var(--amber-bg); color:var(--amber); padding:8px 10px 8px 12px; border-radius:8px; margin-bottom:12px; font-weight:700; font-size:0.8rem;">
+        <span id="serviceRunProgress">Service run</span>
+        <span style="display:flex; gap:6px;">
+          <button type="button" class="chip" onclick="skipServiceRunItem()">Skip</button>
+          <button type="button" class="chip" onclick="endServiceRun(false)">End run</button>
+        </span>
+      </div>
       <div class="card">
         <label style="margin-top:0;">Equipment</label>
         <div class="readonly-field" id="inspAssetDisplay">—</div>
@@ -340,11 +356,18 @@
 
         <div id="inspReadonlyNote" class="hint" style="display:none; margin-top:14px;">Saved inspections can only be changed by an administrator.</div>
         <div class="row" style="margin-top:18px;" id="inspFormButtons">
-          <button class="btn secondary" onclick="showView('view-equipment-detail')">Cancel</button>
+          <button class="btn secondary" onclick="exitInspectionForm()">Cancel</button>
           <button class="btn" onclick="saveInspection()">Save inspection</button>
         </div>
         <button class="btn ghost" id="deleteInspBtn" style="margin-top:10px; display:none;" onclick="deleteInspection()">Delete this inspection</button>
       </div>
+    </section>
+
+    <!-- ===== DUE & OVERDUE DASHBOARD (shared) ===== -->
+    <section id="view-due" class="view">
+      <div class="section-title"><h2>Due &amp; overdue</h2></div>
+      <p class="hint" style="margin:0 0 12px 0;">Equipment overdue or due within 30 days, across your sites. Tap an item to open it.</p>
+      <div id="dueList"><div class="empty">Loading…</div></div>
     </section>
 
     <!-- ===== TECHNICIANS (admin only) ===== -->
@@ -372,25 +395,38 @@
       </div>
     </section>
 
-    <!-- ===== EXPORT + COMPANY SETTINGS (shared; company card admin only) ===== -->
-    <section id="view-export" class="view">
-      <h2>Export records</h2>
-      <p class="hint" style="font-size:0.85rem; margin-bottom:16px;">Export regularly to keep a filed backup of your compliance records.</p>
+    <!-- ===== COMPANY PROFILE (admin only) ===== -->
+    <section id="view-company" class="view">
+      <div class="section-title"><h2>Company profile</h2></div>
+      <p class="hint" style="margin:0 0 12px 0;">Your logo and details appear as the letterhead on generated certificates and the printable site register, and identify your CSV exports.</p>
       <div class="card">
-        <label style="margin-top:0;">Export scope</label>
-        <select id="exportSiteFilter"></select>
-        <button class="btn" style="margin-top:16px;" onclick="exportCSV()">Export as CSV (Excel-compatible)</button>
-      </div>
+        <label style="margin-top:0;">Company logo</label>
+        <div class="logo-box">
+          <img id="coLogoPreview" alt="" style="display:none;">
+          <div style="flex:1;">
+            <input id="coLogoInput" type="file" accept="image/*" onchange="handleCompanyLogo(event)">
+            <div class="hint">PNG or JPG. Resized to 400px wide on upload; a transparent PNG works best.</div>
+          </div>
+        </div>
+        <button class="btn ghost" id="coLogoRemove" style="margin-top:8px; display:none;" onclick="removeCompanyLogo()">Remove logo</button>
 
-      <div class="card" id="companySettingsCard" style="display:none;">
-        <h3 style="font-size:1rem;">Company details</h3>
-        <p class="hint" style="margin-top:2px;">Used as the letterhead on generated certificates.</p>
         <label>Company name</label><input id="coName" placeholder="e.g. FireWorkx Fire Services">
         <label>SAQCC / registration no.</label><input id="coReg" placeholder="e.g. SAQCC/F/CO/12345">
         <label>Address</label><input id="coAddress" placeholder="Street, suburb, city">
         <label>Phone</label><input id="coPhone" placeholder="e.g. 021 555 0100">
         <label>Email</label><input id="coEmail" type="email" placeholder="e.g. admin@fireworkx.co.za">
-        <button class="btn" style="margin-top:16px;" onclick="saveCompanySettings()">Save company details</button>
+        <button class="btn" style="margin-top:16px;" onclick="saveCompanySettings()">Save company profile</button>
+      </div>
+    </section>
+
+    <!-- ===== EXPORT (shared) ===== -->
+    <section id="view-export" class="view">
+      <h2>Export records</h2>
+      <p class="hint" style="font-size:0.85rem; margin-bottom:16px;">Export regularly to keep a filed backup of your compliance records. The file is headed with your company details from the Company profile tab.</p>
+      <div class="card">
+        <label style="margin-top:0;">Export scope</label>
+        <select id="exportSiteFilter"></select>
+        <button class="btn" style="margin-top:16px;" onclick="exportCSV()">Export as CSV (Excel-compatible)</button>
       </div>
     </section>
 
@@ -404,14 +440,26 @@
       </div>
     </section>
 
+    <!-- ===== PRINTABLE SITE REGISTER (rendered into a printable page) ===== -->
+    <section id="view-register" class="view">
+      <div class="backbar"><button onclick="showView('view-site-detail')">←</button><h2>Register</h2></div>
+      <div class="card"><div id="registerContent"></div></div>
+      <div class="row" style="margin-top:6px;">
+        <button class="btn secondary" onclick="showView('view-site-detail')">Back</button>
+        <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+      </div>
+    </section>
+
   </main>
 
   <div id="toast"></div>
 
   <nav class="bottom" id="bottomNav">
     <button id="navSites" class="active" onclick="showView('view-sites')"><span class="ic">🏢</span><span id="navSitesLabel">Sites</span></button>
+    <button id="navDue" onclick="showView('view-due')"><span class="ic">⏰</span><span>Due</span></button>
     <button id="navTechnicians" style="display:none;" onclick="showView('view-technicians')"><span class="ic">👤</span><span>Techs</span></button>
-    <button id="navExport" style="display:none;" onclick="showView('view-export'); refreshExport(); loadCompanySettings();"><span class="ic">⬇</span><span>Export</span></button>
+    <button id="navCompany" style="display:none;" onclick="showView('view-company')"><span class="ic">🏷️</span><span>Company</span></button>
+    <button id="navExport" style="display:none;" onclick="showView('view-export')"><span class="ic">⬇</span><span>Export</span></button>
   </nav>
 </div>
 
@@ -525,7 +573,7 @@ function setupRoleUI(){
   document.getElementById('addSiteBtn').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('navTechnicians').style.display = isAdmin ? 'flex' : 'none';
   document.getElementById('sitesTitle').textContent = isAdmin ? 'All sites' : 'My sites';
-  document.getElementById('companySettingsCard').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('navCompany').style.display = isAdmin ? 'flex' : 'none';
   document.getElementById('navExport').style.display = isAdmin ? 'flex' : 'none';
 }
 
@@ -537,15 +585,25 @@ let editingInspectionId = null;  // inspection being viewed/edited
 let editingSiteId = null;
 let editingTechId = null;
 
-const SITES_VIEWS = ['view-sites','view-site-form','view-site-detail','view-equipment-detail','view-equipment-form','view-inspection-form','view-certificate'];
+const SITES_VIEWS = ['view-sites','view-site-form','view-site-detail','view-equipment-detail','view-equipment-form','view-inspection-form','view-certificate','view-register'];
 function showView(id){
+  // Navigating anywhere other than the next inspection ends an in-progress service run.
+  if(serviceRun.active && id!=='view-inspection-form'){
+    serviceRun = { active:false, queue:[], index:0 };
+    const b = document.getElementById('serviceRunBanner'); if(b) b.style.display='none';
+  }
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.getElementById('navSites').classList.toggle('active', SITES_VIEWS.includes(id));
+  document.getElementById('navDue').classList.toggle('active', id==='view-due');
   document.getElementById('navTechnicians').classList.toggle('active', ['view-technicians','view-tech-form'].includes(id));
+  document.getElementById('navCompany').classList.toggle('active', id==='view-company');
   document.getElementById('navExport').classList.toggle('active', id==='view-export');
   if(id==='view-sites') renderSites();
+  if(id==='view-due') renderDueDashboard();
   if(id==='view-technicians') renderTechnicians();
+  if(id==='view-company') loadCompanySettings();
+  if(id==='view-export'){ refreshExport(); loadCompanySettings(); }
 }
 
 /* ---------- Firestore listener bookkeeping ---------- */
@@ -568,6 +626,9 @@ function renderSites(){
   unsubSites = query.onSnapshot(snap=>{
     sitesCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
     paintSites();
+    if(currentSiteId && document.getElementById('view-site-detail').classList.contains('active')){
+      renderSiteDetailChrome();
+    }
   }, err=>{ toast('Could not load sites: ' + err.message); });
 }
 
@@ -604,8 +665,10 @@ function openSite(id){
   const site = sitesCache.find(s=>s.id===id);
   document.getElementById('siteDetailName').textContent = site ? site.name : '';
   document.getElementById('siteDetailAddress').textContent = site ? (site.address||'') : '';
-  renderSiteCompletion(site);
-  updateSiteDetailCompletion();
+  equipmentFilter = 'all';
+  const searchEl = document.getElementById('equipSearch');
+  if(searchEl) searchEl.value = '';
+  renderSiteDetailChrome();
   showView('view-site-detail');
   loadEquipmentForSite(id);
 }
@@ -681,87 +744,126 @@ async function deleteSite(){
 }
 
 /* ---------- Site completion ----------
-   Two related markers:
-   - `completed` (bool): a workflow lock. Hides the "add equipment" controls and
-     unlocks the certificate. Reopenable.
-   - `lastCompletedDate` / `lastCompletedBy`: a dated record of the most recent
-     time the site was signed off, shown on the site list. */
+   One action. "Complete this site" both flips the `completed` workflow lock
+   (which unlocks the certificate) and stamps a dated sign-off
+   (`lastCompletedDate` / `lastCompletedBy`), shown on the site list. Reopening
+   clears the lock but keeps the last sign-off date as history. Equipment can be
+   added or edited in either state. */
+function renderSiteDetailChrome(){
+  const site = sitesCache.find(s=>s.id===currentSiteId) || {};
+  const done = !!site.completed;
+  const card = document.getElementById('siteCompletionCard');
+  const signoff = site.lastCompletedDate
+    ? `Signed off ${escapeHtml(site.lastCompletedDate)} by ${escapeHtml(site.lastCompletedBy||'—')}`
+    : 'Not yet completed.';
+  if(done){
+    card.style.background = 'var(--green-bg)';
+    card.style.borderColor = 'var(--green)';
+    card.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div><strong style="color:var(--green);">✓ Site complete</strong><div class="hint" style="margin:2px 0 0 0;">${signoff}</div></div>
+        <button class="btn secondary" style="flex-shrink:0; width:auto; white-space:nowrap;" onclick="reopenSite()">Reopen</button>
+      </div>
+      ${currentRole==='admin' ? `<button class="btn secondary" style="margin-top:10px;" onclick="openCertificate(currentSiteId)">🖨 Generate certificate</button>` : ''}`;
+  } else {
+    card.style.background = '#fff';
+    card.style.borderColor = 'var(--line)';
+    card.innerHTML = `
+      <div class="hint" style="margin:0 0 10px 0;">${signoff}</div>
+      <button class="btn secondary" style="background:var(--green-bg); color:var(--green); border:1px solid var(--green);" onclick="completeSite()">✓ Complete this site</button>`;
+  }
+}
+
 async function completeSite(){
   if(!currentSiteId) return;
-  if(!confirm('Mark this site as complete? You can still add or edit equipment afterwards, and reopen it later.')) return;
+  if(!confirm('Mark this site as complete? This signs it off as of today and unlocks the certificate. You can still add or edit equipment, and reopen the site later.')) return;
+  const today = toLocalISO(new Date());
   try{
     await db.collection('sites').doc(currentSiteId).update({
       completed: true,
-      completedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    const site = sitesCache.find(s=>s.id===currentSiteId); if(site) site.completed = true;
-    toast('Site marked as complete');
-    updateSiteDetailCompletion();
-  }catch(e){ toast('Error: ' + e.message); }
-}
-
-async function toggleSiteCompletion(){
-  if(!currentSiteId) return;
-  const site = sitesCache.find(s=>s.id===currentSiteId);
-  try{
-    if(site && site.completed){
-      await db.collection('sites').doc(currentSiteId).update({ completed: false });
-      if(site) site.completed = false;
-      toast('Site reopened');
-    } else {
-      await db.collection('sites').doc(currentSiteId).update({
-        completed: true, completedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      if(site) site.completed = true;
-      toast('Site marked as complete');
-    }
-    updateSiteDetailCompletion();
-  }catch(e){ toast('Error: ' + e.message); }
-}
-
-function renderSiteCompletion(site){
-  const el = document.getElementById('siteCompletionStatus');
-  if(!el) return;
-  el.textContent = (site && site.lastCompletedDate)
-    ? `Last signed off ${site.lastCompletedDate} by ${site.lastCompletedBy||'—'}`
-    : 'Not yet marked as completed.';
-}
-
-async function markSiteCompleted(){
-  if(!currentSiteId) return;
-  try{
-    const today = toLocalISO(new Date());
-    await db.collection('sites').doc(currentSiteId).update({
-      lastCompletedDate: today, lastCompletedBy: currentProfile.name
+      completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastCompletedDate: today,
+      lastCompletedBy: currentProfile.name || ''
     });
     const site = sitesCache.find(s=>s.id===currentSiteId);
-    if(site){ site.lastCompletedDate = today; site.lastCompletedBy = currentProfile.name; }
-    renderSiteCompletion(site);
-    toast('Site signed off for today');
+    if(site){ site.completed = true; site.lastCompletedDate = today; site.lastCompletedBy = currentProfile.name || ''; }
+    renderSiteDetailChrome();
+    toast('Site marked as complete');
   }catch(e){ toast('Error: ' + e.message); }
 }
 
-function updateSiteDetailCompletion(){
-  const site = sitesCache.find(s=>s.id===currentSiteId);
-  const done = !!(site && site.completed);
-  const set = (id,disp)=>{ const el=document.getElementById(id); if(el) el.style.display=disp; };
-  set('completionStatusCard', done ? 'block' : 'none');
-  set('activeSiteControls',   done ? 'none'  : 'block');
-  set('certBtn',              (done && currentRole==='admin') ? 'block' : 'none');
+async function reopenSite(){
+  if(!currentSiteId) return;
+  try{
+    await db.collection('sites').doc(currentSiteId).update({ completed: false });
+    const site = sitesCache.find(s=>s.id===currentSiteId);
+    if(site) site.completed = false;
+    renderSiteDetailChrome();
+    toast('Site reopened');
+  }catch(e){ toast('Error: ' + e.message); }
 }
 
-/* ---------- Company settings (certificate letterhead) ---------- */
+/* ---------- Company profile ----------
+   Logo + details, stored in settings/company (admin-writable per firestore.rules).
+   The logo is held inline as a data: URL — small enough after the 400px resize to
+   sit comfortably under Firestore's 1 MiB document limit, and it avoids needing
+   Storage rules that Storage can't express (no Firestore role lookup there). */
 let companySettings = {};
+let pendingLogo;   // undefined = unchanged, string = new logo, '' = cleared
+
 async function loadCompanySettings(){
   try{
     const doc = await db.collection('settings').doc('company').get();
     companySettings = doc.exists ? doc.data() : {};
-  }catch(e){ companySettings = {}; }
+  }catch(e){ companySettings = companySettings || {}; }
+  pendingLogo = undefined;
   const v = (id,key)=>{ const el=document.getElementById(id); if(el) el.value = companySettings[key]||''; };
   v('coName','name'); v('coReg','reg'); v('coAddress','address'); v('coPhone','phone'); v('coEmail','email');
+  renderCompanyLogoPreview();
 }
+
+function renderCompanyLogoPreview(){
+  const img = document.getElementById('coLogoPreview');
+  const rm = document.getElementById('coLogoRemove');
+  if(!img) return;
+  const src = pendingLogo !== undefined ? pendingLogo : (companySettings.logo || '');
+  img.src = src || '';
+  img.style.display = src ? 'block' : 'none';
+  if(rm) rm.style.display = src ? 'block' : 'none';
+}
+
+function handleCompanyLogo(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const im = new Image();
+    im.onload = ()=>{
+      if(!im.width || !im.height){ toast('Could not read that image — try a PNG or JPG'); return; }
+      const scale = Math.min(1, 400 / im.width);
+      const c = document.createElement('canvas');
+      c.width = Math.round(im.width * scale);
+      c.height = Math.round(im.height * scale);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      const dataUrl = c.toDataURL('image/png');
+      if(dataUrl.length > 900000){ toast('That image is too large — use a smaller or simpler logo'); return; }
+      pendingLogo = dataUrl;
+      renderCompanyLogoPreview();
+    };
+    im.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeCompanyLogo(){
+  pendingLogo = '';
+  const inp = document.getElementById('coLogoInput'); if(inp) inp.value = '';
+  renderCompanyLogoPreview();
+  toast('Logo will be removed when you save');
+}
+
 async function saveCompanySettings(){
-  companySettings = {
+  const payload = {
     name: document.getElementById('coName').value.trim(),
     reg: document.getElementById('coReg').value.trim(),
     address: document.getElementById('coAddress').value.trim(),
@@ -769,9 +871,12 @@ async function saveCompanySettings(){
     email: document.getElementById('coEmail').value.trim(),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
+  if(pendingLogo !== undefined) payload.logo = pendingLogo;   // '' clears it
   try{
-    await db.collection('settings').doc('company').set(companySettings, {merge:true});
-    toast('Company details saved');
+    await db.collection('settings').doc('company').set(payload, {merge:true});
+    companySettings = Object.assign({}, companySettings, payload);
+    pendingLogo = undefined;
+    toast('Company profile saved');
   }catch(e){ toast('Error: ' + e.message); }
 }
 
@@ -782,7 +887,7 @@ async function openCertificate(siteId){
   const site = sitesCache.find(s=>s.id===siteId);
   if(!site){ toast('Site not found'); return; }
   toast('Building certificate…');
-  if(!companySettings.name) await loadCompanySettings();
+  await loadCompanySettings();
   let items = [];
   try{
     const snap = await db.collection('equipment').where('siteId','==', siteId).get();
@@ -805,6 +910,7 @@ async function openCertificate(siteId){
   </tr>`).join('') || `<tr><td colspan="7">No equipment recorded at this site.</td></tr>`;
 
   document.getElementById('certContent').innerHTML = `<div class="cert">
+    ${co.logo ? `<img class="logo" src="${co.logo}" alt="">` : ''}
     <h1>${escapeHtml(co.name || 'Fire Equipment Service Certificate')}</h1>
     <div class="co">
       ${co.reg ? 'Reg: '+escapeHtml(co.reg)+'<br>' : ''}
@@ -831,11 +937,68 @@ async function openCertificate(siteId){
   showView('view-certificate');
 }
 
+/* ---------- Printable site register ----------
+   The full equipment list for a site with each item's latest recorded
+   inspection, headed with the company profile. A companion to the certificate
+   that a technician can leave on site. Available to admins and assigned techs. */
+async function openRegister(siteId){
+  const site = sitesCache.find(s=>s.id===siteId);
+  if(!site){ toast('Site not found'); return; }
+  toast('Building register…');
+  await loadCompanySettings();
+  let items = [];
+  try{
+    const snap = await db.collection('equipment').where('siteId','==', siteId).get();
+    items = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }catch(e){ toast('Could not load equipment: ' + e.message); return; }
+  items.sort((a,b)=>(a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
+
+  const co = companySettings || {};
+  const today = toLocalISO(new Date());
+  const rows = items.map(e=>`<tr>
+    <td>${escapeHtml(typeLabel(e.type))}</td>
+    <td>${escapeHtml(e.size||'')}</td>
+    <td>${escapeHtml(e.serial||'')}</td>
+    <td>${escapeHtml(e.location||'')}</td>
+    <td>${escapeHtml(e.mfgDate||'')}</td>
+    <td>${escapeHtml(e.inspectionDate||'—')}</td>
+    <td>${escapeHtml(e.serviceDate||'')}</td>
+    <td>${escapeHtml(e.nextServiceDue||'')}</td>
+    <td>${escapeHtml(e.pressureTestDue||'')}</td>
+    <td>${escapeHtml(e.inspectionDate ? statusLabel(e.status) : 'Not inspected')}</td>
+  </tr>`).join('') || `<tr><td colspan="10">No equipment recorded at this site.</td></tr>`;
+
+  document.getElementById('registerContent').innerHTML = `<div class="cert">
+    ${co.logo ? `<img class="logo" src="${co.logo}" alt="">` : ''}
+    <h1>${escapeHtml(co.name || 'Fire Equipment Register')}</h1>
+    <div class="co">
+      ${co.reg ? 'Reg: '+escapeHtml(co.reg)+'<br>' : ''}
+      ${co.address ? escapeHtml(co.address)+'<br>' : ''}
+      ${[co.phone, co.email].filter(Boolean).map(escapeHtml).join(' · ')}
+    </div>
+    <h2 style="margin-top:16px; font-size:1rem;">Fire Equipment Register</h2>
+    <div class="meta">
+      <strong>Site:</strong> ${escapeHtml(site.name)}<br>
+      ${site.address ? '<strong>Address:</strong> '+escapeHtml(site.address)+'<br>' : ''}
+      <strong>Generated:</strong> ${today}<br>
+      ${site.lastCompletedDate ? '<strong>Last signed off:</strong> '+escapeHtml(site.lastCompletedDate)+(site.lastCompletedBy?(' by '+escapeHtml(site.lastCompletedBy)):'')+'<br>' : ''}
+      <strong>Equipment items:</strong> ${items.length}
+    </div>
+    <table>
+      <thead><tr><th>Type</th><th>Size</th><th>Serial / tag</th><th>Location</th><th>Mfg</th><th>Last insp.</th><th>Serviced</th><th>Next service</th><th>Pressure test</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="hint" style="margin-top:14px;">Generated by Vigil on ${today}. Reflects the latest recorded inspection for each item.</div>
+  </div>`;
+  showView('view-register');
+}
+
 /* ---------- Equipment (assets) ----------
    An asset doc holds identity + a denormalised snapshot of its latest
    inspection (status, dates, technician) for list rendering. The full history
    lives in the equipment/{id}/inspections subcollection. */
 let equipmentCache = [];
+let equipmentFilter = 'all';   // all | overdue | uninspected | failed
 
 function loadEquipmentForSite(siteId){
   if(unsubEquipment) unsubEquipment();
@@ -851,13 +1014,53 @@ function loadEquipmentForSite(siteId){
   }, err=>{ toast('Could not load equipment: ' + err.message); });
 }
 
+// Bucket a piece of equipment for the site filter chips and the "Due" dashboard.
+function equipmentClass(e){
+  if(!e.inspectionDate) return 'uninspected';
+  if(e.status==='fail') return 'failed';
+  if(dueStatus(e).overdue) return 'overdue';
+  if(e.status==='attention') return 'attention';
+  return 'ok';
+}
+
 function paintEquipment(){
   const wrap = document.getElementById('equipmentList');
+  const bar = document.getElementById('equipFilterBar');
+  updateServiceRunCard();
   if(equipmentCache.length===0){
+    bar.style.display = 'none';
     wrap.innerHTML = `<div class="empty"><div class="big">🧯</div>No equipment logged at this site yet.</div>`;
     return;
   }
-  wrap.innerHTML = equipmentCache.map(e=>{
+
+  const counts = { all: equipmentCache.length, overdue:0, uninspected:0, failed:0 };
+  equipmentCache.forEach(e=>{
+    const c = equipmentClass(e);
+    if(c==='overdue') counts.overdue++;
+    if(c==='uninspected') counts.uninspected++;
+    if(c==='failed') counts.failed++;
+  });
+
+  bar.style.display = equipmentCache.length >= 6 ? 'block' : 'none';
+  if(bar.style.display==='none' && equipmentFilter!=='all'){ equipmentFilter = 'all'; }
+  renderEquipFilterChips(counts);
+
+  const q = (document.getElementById('equipSearch').value||'').trim().toLowerCase();
+  const list = equipmentCache.filter(e=>{
+    if(equipmentFilter!=='all' && equipmentClass(e)!==equipmentFilter) return false;
+    if(q){
+      const hay = `${typeLabel(e.type)} ${e.serial||''} ${e.location||''} ${e.make||''} ${e.size||''}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if(list.length===0){
+    wrap.innerHTML = `<div class="empty">No equipment matches this filter.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = list.map(e=>{
     const dueInfo = dueStatus(e);
     const inspected = !!e.inspectionDate;
     const statusClass = !inspected ? '' : (e.status==='fail' ? 'fail' : (dueInfo.overdue ? 'due' : (e.status==='attention' ? 'due' : 'pass')));
@@ -876,6 +1079,150 @@ function paintEquipment(){
       </div>
     </div>`;
   }).join('');
+}
+
+function renderEquipFilterChips(counts){
+  const chips = [
+    ['all', `All ${counts.all}`],
+    ['overdue', `Overdue ${counts.overdue}`],
+    ['uninspected', `Not inspected ${counts.uninspected}`],
+    ['failed', `Failed ${counts.failed}`]
+  ];
+  document.getElementById('equipFilterChips').innerHTML = chips.map(([k,label])=>
+    `<button class="chip ${equipmentFilter===k?'active':''}" onclick="setEquipFilter('${k}')">${escapeHtml(label)}</button>`).join('');
+}
+function setEquipFilter(k){ equipmentFilter = k; paintEquipment(); }
+
+/* ---------- Service run — walk a site, log every inspection in sequence ---------- */
+let serviceRun = { active:false, queue:[], index:0 };
+
+function updateServiceRunCard(){
+  const card = document.getElementById('serviceRunCard');
+  const show = equipmentCache.length > 0 && !serviceRun.active;
+  card.style.display = show ? 'block' : 'none';
+  if(show){
+    document.getElementById('serviceRunSummary').textContent =
+      `Log inspections for all ${equipmentCache.length} item${equipmentCache.length===1?'':'s'} back to back`;
+  }
+}
+
+function startServiceRun(){
+  if(!equipmentCache.length) return;
+  const ordered = equipmentCache.slice().sort((a,b)=>
+    (a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
+  serviceRun = { active:true, queue: ordered.map(e=>e.id), index:0 };
+  advanceServiceRun();
+}
+
+function advanceServiceRun(){
+  if(!serviceRun.active) return;
+  if(serviceRun.index >= serviceRun.queue.length){ endServiceRun(true); return; }
+  const eqId = serviceRun.queue[serviceRun.index];
+  if(!equipmentCache.find(x=>x.id===eqId)){ serviceRun.index++; advanceServiceRun(); return; }
+  currentEquipmentId = eqId;
+  editingAssetId = eqId;
+  openInspectionForm(null);
+  updateServiceRunBanner();
+}
+
+function skipServiceRunItem(){
+  if(!serviceRun.active) return;
+  serviceRun.index++;
+  advanceServiceRun();
+}
+
+function endServiceRun(finished){
+  const wasActive = serviceRun.active;
+  serviceRun = { active:false, queue:[], index:0 };
+  const banner = document.getElementById('serviceRunBanner');
+  if(banner) banner.style.display = 'none';
+  if(wasActive){
+    toast(finished ? 'Service run complete' : 'Service run ended');
+    if(currentSiteId) openSite(currentSiteId);
+  }
+}
+
+function updateServiceRunBanner(){
+  const b = document.getElementById('serviceRunBanner');
+  if(!b) return;
+  if(!serviceRun.active){ b.style.display = 'none'; return; }
+  b.style.display = 'flex';
+  document.getElementById('serviceRunProgress').textContent =
+    `Service run · ${serviceRun.index + 1} / ${serviceRun.queue.length}`;
+}
+
+function exitInspectionForm(){
+  if(serviceRun.active){ endServiceRun(false); return; }
+  showView('view-equipment-detail');
+}
+
+/* ---------- "Due & overdue" dashboard ---------- */
+async function renderDueDashboard(){
+  const wrap = document.getElementById('dueList');
+  const siteIds = sitesCache.map(s=>s.id);
+  if(siteIds.length===0){
+    wrap.innerHTML = `<div class="empty"><div class="big">⏰</div>No sites yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="empty">Loading…</div>`;
+  const today = toLocalISO(new Date());
+  const horizon = addDaysISO(today, 30);
+
+  let items = [];
+  try{
+    for(let i=0; i<siteIds.length; i+=10){
+      const snap = await db.collection('equipment').where('siteId','in', siteIds.slice(i, i+10)).get();
+      snap.forEach(d=>items.push({ id:d.id, ...d.data() }));
+    }
+  }catch(e){
+    wrap.innerHTML = `<div class="empty">Could not load equipment: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+
+  const flagged = [];
+  items.forEach(e=>{
+    const reasons = [];
+    let earliest = null;
+    const consider = (label, date)=>{
+      if(date && date <= horizon){
+        reasons.push({ label, date, overdue: date < today });
+        if(!earliest || date < earliest) earliest = date;
+      }
+    };
+    if(!e.inspectionDate) reasons.push({ label:'Never inspected', date:null, overdue:true });
+    consider('Service due', e.nextServiceDue);
+    consider('Pressure test due', e.pressureTestDue);
+    if(e.status==='fail') reasons.push({ label:'Non-compliant', date:null, overdue:true });
+    else if(e.status==='attention') reasons.push({ label:'Needs attention', date:null, overdue:false });
+    if(reasons.length) flagged.push({ e, reasons, earliest, overdue: reasons.some(r=>r.overdue) });
+  });
+
+  if(flagged.length===0){
+    wrap.innerHTML = `<div class="empty"><div class="big">✓</div>Nothing due in the next 30 days.</div>`;
+    return;
+  }
+
+  flagged.sort((a,b)=>
+    (b.overdue - a.overdue) ||
+    ((a.earliest||'9999-99-99').localeCompare(b.earliest||'9999-99-99')));
+
+  const siteName = id => (sitesCache.find(s=>s.id===id)||{}).name || 'Unknown site';
+  wrap.innerHTML = flagged.map(({e, reasons, overdue})=>`
+    <div class="insp-row status-${overdue?'fail':'due'}" onclick="dashboardOpen('${e.siteId}','${e.id}')">
+      <div class="top">
+        <span class="date">${escapeHtml(typeLabel(e.type))}${e.serial?(' · '+escapeHtml(e.serial)):''}</span>
+        <span class="pill ${overdue?'fail':'due'}">${overdue?'Overdue':'Due soon'}</span>
+      </div>
+      <div class="sub">${escapeHtml(siteName(e.siteId))}${e.location?(' · '+escapeHtml(e.location)):''}</div>
+      <div class="pillrow" style="margin-top:8px;">
+        ${reasons.map(r=>`<span class="pill ${r.overdue?'fail':'due'}">${escapeHtml(r.label)}${r.date?(' '+escapeHtml(r.date)):''}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function dashboardOpen(siteId, eqId){
+  openSite(siteId);
+  openEquipmentDetail(eqId);
 }
 
 function dueStatus(e){
@@ -963,6 +1310,11 @@ function toLocalISO(dt){
 function addYearsISO(iso, years){
   const d = new Date(iso+'T00:00:00');
   d.setFullYear(d.getFullYear()+years);
+  return toLocalISO(d);
+}
+function addDaysISO(iso, days){
+  const d = new Date(iso+'T00:00:00');
+  d.setDate(d.getDate()+days);
   return toLocalISO(d);
 }
 function onServiceDateChange(){
@@ -1183,6 +1535,7 @@ function openInspectionForm(inspId){
   document.getElementById('inspReadonlyNote').style.display = inspectionReadOnly ? 'block' : 'none';
   document.getElementById('deleteInspBtn').style.display = (i && currentRole==='admin') ? 'block' : 'none';
 
+  updateServiceRunBanner();
   showView('view-inspection-form');
 }
 
@@ -1270,8 +1623,14 @@ async function saveInspection(){
     }
     if(parentPatch) batch.update(parentRef, parentPatch);
     await batch.commit();
-    toast('Inspection saved');
-    showView('view-equipment-detail');
+    if(serviceRun.active){
+      serviceRun.index++;
+      toast('Saved — next item');
+      advanceServiceRun();
+    } else {
+      toast('Inspection saved');
+      showView('view-equipment-detail');
+    }
   }catch(err){ toast('Error saving: ' + err.message); }
 }
 
@@ -1469,6 +1828,7 @@ async function exportCSV(){
   const siteIds = filter==='all' ? sitesCache.map(s=>s.id) : [filter];
   if(siteIds.length===0){ toast('No sites to export'); return; }
   toast('Gathering records…');
+  if(!companySettings || !companySettings.name) await loadCompanySettings();
 
   // One row per inspection (full compliance history), plus a blank-inspection
   // row for any asset that has never been inspected.
@@ -1500,7 +1860,15 @@ async function exportCSV(){
   if(rows.length===0){ toast('No records to export'); return; }
 
   const headers = ['Site','Type','Size','Make','Asset Tag / Serial','Location','Manufacture Date','Inspection Date','Service Date','Next Service Due','Pressure Test Due','Overall Status','Checklist','Technician','SAQCC No.','Notes'];
-  const lines = [headers.map(csvEscape).join(',')].concat(rows.map(r=>r.map(csvEscape).join(',')));
+  const co = companySettings || {};
+  const metaLines = [
+    ['Company', co.name], ['Registration', co.reg], ['Address', co.address],
+    ['Phone', co.phone], ['Email', co.email], ['Exported', toLocalISO(new Date())]
+  ].filter(([,v])=>v).map(pair=>pair.map(csvEscape).join(','));
+  const lines = metaLines
+    .concat(metaLines.length ? [''] : [])
+    .concat([headers.map(csvEscape).join(',')])
+    .concat(rows.map(r=>r.map(csvEscape).join(',')));
   const csv = String.fromCharCode(0xFEFF) + lines.join('\r\n');   // BOM so Excel reads UTF-8
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
