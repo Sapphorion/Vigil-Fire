@@ -146,7 +146,8 @@
 
   nav.bottom{position:fixed; bottom:0; left:0; right:0; z-index:20; background:var(--surface); border-top:1px solid var(--line);
     display:flex; padding:6px 6px calc(6px + env(safe-area-inset-bottom, 0px)) 6px;}
-  nav.bottom button{position:relative; flex:1; background:none; border:none; padding:9px 4px 6px; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--grey); font-size:0.62rem; font-weight:700; cursor:pointer; text-transform:uppercase; letter-spacing:0.04em;}
+  nav.bottom button{position:relative; flex:1; min-width:0; background:none; border:none; padding:9px 2px 6px; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--grey); font-size:0.58rem; font-weight:700; cursor:pointer; text-transform:uppercase; letter-spacing:0.02em;}
+  nav.bottom button span{max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   nav.bottom button .ic{display:flex;}
   nav.bottom button .ic svg{width:22px; height:22px; stroke:currentColor; fill:none;}
   nav.bottom button.active{color:var(--red);}
@@ -507,17 +508,13 @@
         <label style="margin-top:0;">Per-site reports</label>
         <button class="btn secondary" style="margin-top:6px;" onclick="openPressureTestReport()">Pressure test report</button>
         <button class="btn secondary" style="margin-top:8px;" onclick="openRechargeReport()">Recharge report</button>
-        <div class="hint">Choose a single site above. Each report covers the equipment whose latest record shows a pressure test / recharge was performed.</div>
-
-        <div class="divider"></div>
-        <label style="margin-top:0;">Company registers</label>
-        <button class="btn secondary" style="margin-top:6px;" onclick="showView('view-calibration')">Calibration register — scales &amp; gauges</button>
+        <div class="hint">Choose a single site above. Each report covers the equipment whose latest record shows a pressure test / recharge was performed. The calibration register is on its own tab.</div>
       </div>
     </section>
 
-    <!-- ===== CALIBRATION REGISTER (weekly checks of test equipment) ===== -->
+    <!-- ===== CALIBRATION REGISTER (weekly checks of test equipment) — own tab ===== -->
     <section id="view-calibration" class="view">
-      <div class="backbar"><button onclick="showView(currentRole==='admin' ? 'view-export' : 'view-sites')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2>Calibration register</h2></div>
+      <div class="section-title"><h2>Calibration register</h2></div>
       <p class="hint" style="margin:0 0 12px;">SANS 1475 Annex A: the workshop's production-control equipment (weighing scales, working and master pressure gauges) must be checked against reference instruments at least weekly, and recorded in writing. Log each weekly check here.</p>
       <div class="card">
         <label style="margin-top:0;">Record a check</label>
@@ -724,9 +721,10 @@ function setupRoleUI(){
   document.getElementById('sitesTitle').textContent = isAdmin ? 'All sites' : 'My sites';
   document.getElementById('navCompany').style.display = isAdmin ? 'flex' : 'none';
   document.getElementById('navExport').style.display = isAdmin ? 'flex' : 'none';
-  // The calibration tab is for technicians the admin has granted the permission.
+  // The calibration tab is shown to admins and to technicians the admin has
+  // granted the calibration permission.
   document.getElementById('navCalibration').style.display =
-    (!isAdmin && currentProfile && currentProfile.canCalibrate) ? 'flex' : 'none';
+    (isAdmin || (currentProfile && currentProfile.canCalibrate)) ? 'flex' : 'none';
 }
 
 /* ---------- View routing ---------- */
@@ -744,8 +742,9 @@ function showView(id){
   document.getElementById('navDue').classList.toggle('active', id==='view-due');
   document.getElementById('navTechnicians').classList.toggle('active', ['view-technicians','view-tech-form'].includes(id));
   document.getElementById('navCompany').classList.toggle('active', id==='view-company');
-  document.getElementById('navExport').classList.toggle('active', ['view-export','view-calibration','view-report'].includes(id));
-  document.getElementById('navCalibration').classList.toggle('active', ['view-calibration','view-report'].includes(id));
+  const calReport = id==='view-report' && reportBackView==='view-calibration';
+  document.getElementById('navExport').classList.toggle('active', id==='view-export' || (id==='view-report' && !calReport));
+  document.getElementById('navCalibration').classList.toggle('active', id==='view-calibration' || calReport);
   if(id==='view-sites') renderSites();
   if(id==='view-due') renderDueDashboard();
   if(id==='view-technicians') renderTechnicians();
