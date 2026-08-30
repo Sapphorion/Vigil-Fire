@@ -198,6 +198,9 @@
   .cert th{background:var(--paper-dim);}
   .cert .sign{margin-top:28px; font-size:0.85rem;}
   .cert .sign .line{border-top:1px solid var(--ink); width:220px; margin-top:36px; padding-top:4px;}
+  .cert h3{font-size:0.95rem; margin:18px 0 6px; text-transform:uppercase; letter-spacing:0.03em;}
+  .cert .regpage + .regpage{margin-top:36px; padding-top:24px; border-top:2px dashed var(--line);}
+  .cert .tablewrap{overflow-x:auto; -webkit-overflow-scrolling:touch;}
   @media print {
     header.top, nav.bottom, #toast, .backbar, .btn, #syncPill { display:none !important; }
     body { padding-bottom:0; background:#fff; }
@@ -206,6 +209,7 @@
     .card { border:none; padding:0; margin:0; }
     .cert table { font-size:0.72rem; }
     .cert th, .cert td { padding:4px 6px; }
+    .cert .regpage + .regpage{ break-before:page; margin-top:0; padding-top:0; border-top:none; }
   }
 </style>
 </head>
@@ -287,16 +291,10 @@
 
       <div class="card" id="siteCompletionCard" style="padding:14px 16px;"></div>
 
-      <button class="btn secondary" style="margin-bottom:14px;" onclick="openRegister(currentSiteId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Printable register</button>
+      <button class="btn secondary" id="registerBtn" style="margin-bottom:8px; display:none;" onclick="openRegister(currentSiteId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Printable register</button>
+      <div id="registerBlockNote" class="hint" style="display:none; color:var(--red-dark); margin:0 0 14px 2px;"></div>
 
-      <div class="card" id="serviceRunCard" style="display:none; padding:12px 16px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-          <div><strong>Service run</strong><div class="hint" id="serviceRunSummary" style="margin:2px 0 0 0;"></div></div>
-          <button class="btn secondary" style="flex-shrink:0; width:auto; white-space:nowrap;" onclick="startServiceRun()"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg>Start</button>
-        </div>
-      </div>
-
-      <button class="btn" onclick="openAssetForm(null)" style="margin-bottom:10px;">+ Add equipment</button>
+      <button class="btn" onclick="openEquipmentForm(null)" style="margin-bottom:10px;">+ Add equipment</button>
 
       <div id="equipFilterBar" style="display:none; margin-bottom:12px;">
         <input id="equipSearch" placeholder="Search type, tag or location…" oninput="paintEquipment()" style="margin-bottom:8px;">
@@ -307,33 +305,18 @@
       <div id="equipmentList"></div>
     </section>
 
-    <!-- ===== EQUIPMENT (ASSET) DETAIL — identity + inspection history ===== -->
-    <section id="view-equipment-detail" class="view">
-      <div class="backbar"><button onclick="showView('view-site-detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="assetDetailTitle">Equipment</h2></div>
-      <div class="card">
-        <div id="assetIdentity"></div>
-        <div class="row" style="margin-top:14px;">
-          <button class="btn secondary" id="editAssetBtn" onclick="openAssetForm(currentEquipmentId)">Edit asset details</button>
-          <button class="btn" onclick="openInspectionForm(null)">+ Log inspection</button>
-        </div>
-        <button class="btn ghost" id="deleteAssetBtn" style="margin-top:10px; display:none;" onclick="deleteAsset()">Delete this asset</button>
-      </div>
-      <div class="section-title"><h2>Inspection history</h2></div>
-      <div id="inspectionList"></div>
-    </section>
-
-    <!-- ===== ASSET FORM — physical equipment identity only ===== -->
+    <!-- ===== EQUIPMENT — identity + current service / inspection in one form ===== -->
     <section id="view-equipment-form" class="view">
-      <div class="backbar"><button onclick="cancelAssetForm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="assetFormTitle">New equipment</h2></div>
+      <div class="backbar"><button onclick="showView('view-site-detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="equipFormTitle">New equipment</h2></div>
       <div class="card">
-        <label>Equipment type</label>
-        <select id="eqType">
+        <label style="margin-top:0;">Equipment type</label>
+        <select id="eqType" onchange="onTypeChange()">
           <option value="">Select type…</option>
           <!-- options populated from EQUIPMENT_TYPES at startup -->
         </select>
         <div class="row">
           <div><label>Weight / size</label><input id="eqSize" placeholder="e.g. 4.5 kg / 9 L"></div>
-          <div><label>Make</label><input id="eqMake" placeholder="e.g. SafeQuip, Centa, etc."></div>
+          <div><label>Make</label><input id="eqMake" placeholder="e.g. SafeQuip, Centa"></div>
         </div>
         <label>Asset tag / serial no.</label>
         <input id="eqSerial" placeholder="e.g. FW-0231">
@@ -341,37 +324,31 @@
         <input id="eqLocation" placeholder="e.g. Ground floor, near main exit, kitchen wall">
         <label>Manufacture date</label>
         <input id="eqMfgDate" type="date">
-        <div class="hint">This is the equipment itself. Service dates and checks are captured each time you log an inspection.</div>
-        <div class="row" style="margin-top:18px;">
-          <button class="btn secondary" onclick="cancelAssetForm()">Cancel</button>
-          <button class="btn" onclick="saveAsset()">Save</button>
-        </div>
-      </div>
-    </section>
 
-    <!-- ===== INSPECTION FORM — one dated inspection event ===== -->
-    <section id="view-inspection-form" class="view">
-      <div class="backbar"><button onclick="exitInspectionForm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="inspFormTitle">Log inspection</h2></div>
-      <div id="serviceRunBanner" style="display:none; align-items:center; justify-content:space-between; gap:10px; background:var(--amber-bg); color:var(--amber); padding:8px 10px 8px 12px; border-radius:8px; margin-bottom:12px; font-weight:700; font-size:0.8rem;">
-        <span id="serviceRunProgress">Service run</span>
-        <span style="display:flex; gap:6px;">
-          <button type="button" class="chip" onclick="skipServiceRunItem()">Skip</button>
-          <button type="button" class="chip" onclick="endServiceRun(false)">End run</button>
-        </span>
-      </div>
-      <div class="card">
-        <label style="margin-top:0;">Equipment</label>
-        <div class="readonly-field" id="inspAssetDisplay">—</div>
-
+        <div class="divider"></div>
+        <label style="margin-top:0;">Service &amp; inspection</label>
         <div class="row">
           <div><label>Service date</label><input id="eqServiceDate" type="date" onchange="onServiceDateChange()"></div>
           <div><label>Inspection date</label><input id="eqInspDate" type="date"></div>
         </div>
+        <div><label>Next service due</label><input id="eqNextDue" type="date"></div>
         <div class="row">
-          <div><label>Next service due</label><input id="eqNextDue" type="date"></div>
+          <div><label>Last pressure test date</label><input id="eqPressureTestDate" type="date" onchange="onPressureTestDateChange()"></div>
           <div><label>Pressure test due <span id="ptHint" style="text-transform:none;font-weight:500;"></span></label><input id="eqPressureTestDue" type="date"></div>
         </div>
-        <div class="hint">Next service auto-fills to 1 year after the service date (annual servicing per SANS 1475). Pressure test due auto-fills to 5 years after the service date for powder, foam and water extinguishers, or 10 years for CO₂. Hydrants, hose reels, sirens and blankets get no auto-filled pressure-test date — set one manually if it applies.</div>
+        <div class="hint">Next service auto-fills to 1 year after the service date (annual servicing per SANS 1475). Enter the date of the last pressure (hydrostatic) test — "pressure test due" then auto-fills to 5 years later for powder, foam and water extinguishers, or 10 years for CO₂. Hydrants, hose reels, sirens and blankets get no auto-filled date. The pressure test date carries over between services, so you only change it in the year a test is actually done.</div>
+
+        <div class="divider"></div>
+        <label style="margin-top:0;">Recharge required?</label>
+        <select id="eqRechargeReq" onchange="onRechargeReqChange()">
+          <option value="no">No — equipment charged and in order</option>
+          <option value="yes">Yes — recharge needed</option>
+        </select>
+        <div id="rechargeDateWrap" style="display:none;">
+          <label>Date recharged</label>
+          <input id="eqRechargeDate" type="date">
+        </div>
+        <div class="hint">A "recharge needed" item stays on the Due list until its recharge date is filled in — the technician can add that date from Due once the unit is back. Per SACAS, the printable register can't be generated while any recharge on the site is still outstanding.</div>
 
         <div class="divider"></div>
         <label style="margin-top:0;">Inspection checklist</label>
@@ -393,19 +370,18 @@
         <input id="eqPhotoInput" type="file" accept="image/*" capture="environment" onchange="handlePhoto(event)">
         <img id="eqPhotoPreview" class="photo-preview" style="display:none;">
 
-        <div id="inspReadonlyNote" class="hint" style="display:none; margin-top:14px;">Saved inspections can only be changed by an administrator.</div>
-        <div class="row" style="margin-top:18px;" id="inspFormButtons">
-          <button class="btn secondary" onclick="exitInspectionForm()">Cancel</button>
-          <button class="btn" onclick="saveInspection()">Save inspection</button>
+        <div class="row" style="margin-top:18px;">
+          <button class="btn secondary" onclick="showView('view-site-detail')">Cancel</button>
+          <button class="btn" onclick="saveEquipment()">Save</button>
         </div>
-        <button class="btn ghost" id="deleteInspBtn" style="margin-top:10px; display:none;" onclick="deleteInspection()">Delete this inspection</button>
+        <button class="btn ghost" id="deleteEquipBtn" style="margin-top:10px; display:none;" onclick="deleteEquipment()">Delete this equipment</button>
       </div>
     </section>
 
     <!-- ===== DUE & OVERDUE DASHBOARD (shared) ===== -->
     <section id="view-due" class="view">
       <div class="section-title"><h2>Due &amp; overdue</h2></div>
-      <p class="hint" style="margin:0 0 12px 0;">Equipment overdue or due within 30 days, across your sites. Tap an item to open it.</p>
+      <p class="hint" style="margin:0 0 12px 0;">Equipment overdue or due within 30 days, plus anything awaiting a recharge, across your sites. Tap an item to open it, or record a recharge date right here.</p>
       <div id="dueList"><div class="empty">Loading…</div></div>
     </section>
 
@@ -630,19 +606,13 @@ function setupRoleUI(){
 
 /* ---------- View routing ---------- */
 let currentSiteId = null;
-let currentEquipmentId = null;   // asset currently being viewed
-let editingAssetId = null;       // asset being created/edited in the asset form
-let editingInspectionId = null;  // inspection being viewed/edited
+let currentEquipmentId = null;   // equipment item currently open
+let editingAssetId = null;       // equipment item being created/edited on the form
 let editingSiteId = null;
 let editingTechId = null;
 
-const SITES_VIEWS = ['view-sites','view-site-form','view-site-detail','view-equipment-detail','view-equipment-form','view-inspection-form','view-certificate','view-register'];
+const SITES_VIEWS = ['view-sites','view-site-form','view-site-detail','view-equipment-form','view-certificate','view-register'];
 function showView(id){
-  // Navigating anywhere other than the next inspection ends an in-progress service run.
-  if(serviceRun.active && id!=='view-inspection-form'){
-    serviceRun = { active:false, queue:[], index:0 };
-    const b = document.getElementById('serviceRunBanner'); if(b) b.style.display='none';
-  }
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.getElementById('navSites').classList.toggle('active', SITES_VIEWS.includes(id));
@@ -712,10 +682,11 @@ function siteCategoryLabel(c){ return c==='survey' ? 'Survey' : (c==='servicing'
 function openSite(id){
   currentSiteId = id;
   currentEquipmentId = null;
-  if(unsubInspections){ unsubInspections(); unsubInspections=null; }
   const site = sitesCache.find(s=>s.id===id);
   document.getElementById('siteDetailName').textContent = site ? site.name : '';
   document.getElementById('siteDetailAddress').textContent = site ? (site.address||'') : '';
+  document.getElementById('registerBtn').style.display = currentRole==='admin' ? '' : 'none';
+  document.getElementById('registerBlockNote').style.display = 'none';
   equipmentFilter = 'all';
   const searchEl = document.getElementById('equipSearch');
   if(searchEl) searchEl.value = '';
@@ -956,9 +927,10 @@ async function openCertificate(siteId){
     <td>${escapeHtml(e.location||'')}</td>
     <td>${escapeHtml(e.serviceDate||'')}</td>
     <td>${escapeHtml(e.nextServiceDue||'')}</td>
+    <td>${escapeHtml(e.pressureTestDate||'')}</td>
     <td>${escapeHtml(e.pressureTestDue||'')}</td>
     <td>${escapeHtml(statusLabel(e.status))}</td>
-  </tr>`).join('') || `<tr><td colspan="7">No equipment recorded at this site.</td></tr>`;
+  </tr>`).join('') || `<tr><td colspan="8">No equipment recorded at this site.</td></tr>`;
 
   document.getElementById('certContent').innerHTML = `<div class="cert">
     ${co.logo ? `<img class="logo" src="${co.logo}" alt="">` : ''}
@@ -977,7 +949,7 @@ async function openCertificate(siteId){
       <strong>Equipment items:</strong> ${items.length}
     </div>
     <table>
-      <thead><tr><th>Type</th><th>Serial / tag</th><th>Location</th><th>Serviced</th><th>Next service</th><th>Pressure test</th><th>Status</th></tr></thead>
+      <thead><tr><th>Type</th><th>Serial / tag</th><th>Location</th><th>Serviced</th><th>Next service</th><th>Pressure tested</th><th>Pressure test due</th><th>Status</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="sign">
@@ -988,11 +960,12 @@ async function openCertificate(siteId){
   showView('view-certificate');
 }
 
-/* ---------- Printable site register ----------
-   The full equipment list for a site with each item's latest recorded
-   inspection, headed with the company profile. A companion to the certificate
-   that a technician can leave on site. Available to admins and assigned techs. */
+/* ---------- Printable site register (admin only) ----------
+   Page 1: company + site + technician header and a short service summary.
+   Page 2 onward: the full equipment register. Blocked while any recharge on
+   the site is still outstanding (SACAS requirement). */
 async function openRegister(siteId){
+  if(currentRole !== 'admin'){ toast('Only an administrator can generate the register'); return; }
   const site = sitesCache.find(s=>s.id===siteId);
   if(!site){ toast('Site not found'); return; }
   toast('Building register…');
@@ -1002,10 +975,61 @@ async function openRegister(siteId){
     const snap = await db.collection('equipment').where('siteId','==', siteId).get();
     items = snap.docs.map(d=>({id:d.id, ...d.data()}));
   }catch(e){ toast('Could not load equipment: ' + e.message); return; }
+
+  const outstanding = items.filter(e=>e.rechargeRequired && !e.rechargeDate);
+  if(outstanding.length){
+    toast(`${outstanding.length} recharge${outstanding.length===1?'':'s'} still outstanding — clear these first`);
+    return;
+  }
+
   items.sort((a,b)=>(a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
 
   const co = companySettings || {};
   const today = toLocalISO(new Date());
+
+  // Service summary — count by equipment type
+  const counts = {};
+  items.forEach(e=>{ const k = typeLabel(e.type); counts[k] = (counts[k]||0) + 1; });
+  const summaryRows = Object.entries(counts).sort((a,b)=>a[0].localeCompare(b[0]))
+    .map(([k,n])=>`<tr><td>${escapeHtml(k)}</td><td style="text-align:right;">${n}</td></tr>`).join('')
+    || `<tr><td colspan="2">No equipment recorded.</td></tr>`;
+  const techNames = [...new Set(items.map(e=>e.technicianName).filter(Boolean))];
+  const techLine = techNames.length ? techNames.join(', ') : (currentProfile.name || '');
+  const rechargedCount = items.filter(e=>e.rechargeRequired && e.rechargeDate).length;
+
+  const letterhead = `
+    ${co.logo ? `<img class="logo" src="${co.logo}" alt="">` : ''}
+    <h1>${escapeHtml(co.name || 'Fire Equipment Register')}</h1>
+    <div class="co">
+      ${co.reg ? 'Reg: '+escapeHtml(co.reg)+'<br>' : ''}
+      ${co.address ? escapeHtml(co.address)+'<br>' : ''}
+      ${[co.phone, co.email].filter(Boolean).map(escapeHtml).join(' · ')}
+    </div>`;
+
+  const page1 = `<div class="regpage">
+    ${letterhead}
+    <h2 style="margin-top:16px; font-size:1rem;">Fire Equipment Register — Service Summary</h2>
+    <div class="meta">
+      <strong>Site:</strong> ${escapeHtml(site.name)}<br>
+      ${site.address ? '<strong>Address:</strong> '+escapeHtml(site.address)+'<br>' : ''}
+      ${site.notes ? '<strong>Site notes:</strong> '+escapeHtml(site.notes)+'<br>' : ''}
+      <strong>Generated:</strong> ${today}<br>
+      ${site.lastCompletedDate ? '<strong>Last signed off:</strong> '+escapeHtml(site.lastCompletedDate)+(site.lastCompletedBy?(' by '+escapeHtml(site.lastCompletedBy)):'')+'<br>' : ''}
+      <strong>Technician(s):</strong> ${escapeHtml(techLine)}
+    </div>
+    <h3>Equipment summary</h3>
+    <table>
+      <thead><tr><th>Equipment type</th><th style="text-align:right;">Quantity</th></tr></thead>
+      <tbody>
+        ${summaryRows}
+        <tr><td><strong>Total items</strong></td><td style="text-align:right;"><strong>${items.length}</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="hint" style="margin-top:12px;">
+      Recharges completed this service: ${rechargedCount}. All recharges on this site are cleared.
+    </div>
+  </div>`;
+
   const rows = items.map(e=>`<tr>
     <td>${escapeHtml(typeLabel(e.type))}</td>
     <td>${escapeHtml(e.size||'')}</td>
@@ -1015,39 +1039,29 @@ async function openRegister(siteId){
     <td>${escapeHtml(e.inspectionDate||'—')}</td>
     <td>${escapeHtml(e.serviceDate||'')}</td>
     <td>${escapeHtml(e.nextServiceDue||'')}</td>
+    <td>${escapeHtml(e.pressureTestDate||'')}</td>
     <td>${escapeHtml(e.pressureTestDue||'')}</td>
+    <td>${escapeHtml(e.rechargeDate || (e.rechargeRequired ? 'Outstanding' : '—'))}</td>
     <td>${escapeHtml(e.inspectionDate ? statusLabel(e.status) : 'Not inspected')}</td>
-  </tr>`).join('') || `<tr><td colspan="10">No equipment recorded at this site.</td></tr>`;
+  </tr>`).join('') || `<tr><td colspan="12">No equipment recorded at this site.</td></tr>`;
 
-  document.getElementById('registerContent').innerHTML = `<div class="cert">
-    ${co.logo ? `<img class="logo" src="${co.logo}" alt="">` : ''}
-    <h1>${escapeHtml(co.name || 'Fire Equipment Register')}</h1>
-    <div class="co">
-      ${co.reg ? 'Reg: '+escapeHtml(co.reg)+'<br>' : ''}
-      ${co.address ? escapeHtml(co.address)+'<br>' : ''}
-      ${[co.phone, co.email].filter(Boolean).map(escapeHtml).join(' · ')}
-    </div>
-    <h2 style="margin-top:16px; font-size:1rem;">Fire Equipment Register</h2>
-    <div class="meta">
-      <strong>Site:</strong> ${escapeHtml(site.name)}<br>
-      ${site.address ? '<strong>Address:</strong> '+escapeHtml(site.address)+'<br>' : ''}
-      <strong>Generated:</strong> ${today}<br>
-      ${site.lastCompletedDate ? '<strong>Last signed off:</strong> '+escapeHtml(site.lastCompletedDate)+(site.lastCompletedBy?(' by '+escapeHtml(site.lastCompletedBy)):'')+'<br>' : ''}
-      <strong>Equipment items:</strong> ${items.length}
-    </div>
-    <table>
-      <thead><tr><th>Type</th><th>Size</th><th>Serial / tag</th><th>Location</th><th>Mfg</th><th>Last insp.</th><th>Serviced</th><th>Next service</th><th>Pressure test</th><th>Status</th></tr></thead>
+  const page2 = `<div class="regpage">
+    <h2 style="font-size:1rem;">Equipment Register — ${escapeHtml(site.name)}</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Type</th><th>Size</th><th>Serial / tag</th><th>Location</th><th>Mfg</th><th>Last insp.</th><th>Serviced</th><th>Next service</th><th>Pressure tested</th><th>Pressure test due</th><th>Recharged</th><th>Status</th></tr></thead>
       <tbody>${rows}</tbody>
-    </table>
-    <div class="hint" style="margin-top:14px;">Generated by Vigil Fire on ${today}. Reflects the latest recorded inspection for each item.</div>
+    </table></div>
+    <div class="hint" style="margin-top:14px;">Generated by Vigil Fire on ${today}. Reflects the current recorded state of each item.</div>
   </div>`;
+
+  document.getElementById('registerContent').innerHTML = `<div class="cert">${page1}${page2}</div>`;
   showView('view-register');
 }
 
-/* ---------- Equipment (assets) ----------
-   An asset doc holds identity + a denormalised snapshot of its latest
-   inspection (status, dates, technician) for list rendering. The full history
-   lives in the equipment/{id}/inspections subcollection. */
+/* ---------- Equipment ----------
+   Each equipment doc is the physical asset (type, serial, location) plus its
+   current service / inspection state and recharge status, all inline. One doc
+   per item — identity and inspection are edited together on one form. */
 let equipmentCache = [];
 let equipmentFilter = 'all';   // all | overdue | uninspected | failed
 
@@ -1057,11 +1071,6 @@ function loadEquipmentForSite(siteId){
     equipmentCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
     equipmentCache.sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
     paintEquipment();
-    // Keep the asset-detail view fresh if we're looking at one.
-    if(document.getElementById('view-equipment-detail').classList.contains('active') && currentEquipmentId){
-      paintAssetIdentity();
-      paintInspections();
-    }
   }, err=>{ toast('Could not load equipment: ' + err.message); });
 }
 
@@ -1077,7 +1086,12 @@ function equipmentClass(e){
 function paintEquipment(){
   const wrap = document.getElementById('equipmentList');
   const bar = document.getElementById('equipFilterBar');
-  updateServiceRunCard();
+  const outstanding = equipmentCache.filter(e=>e.rechargeRequired && !e.rechargeDate).length;
+  const note = document.getElementById('registerBlockNote');
+  if(note){
+    note.style.display = (currentRole==='admin' && outstanding) ? 'block' : 'none';
+    note.textContent = `${outstanding} item${outstanding===1?'':'s'} awaiting recharge — clear these before the register can be generated.`;
+  }
   if(equipmentCache.length===0){
     bar.style.display = 'none';
     wrap.innerHTML = `<div class="empty"><div class="big">${ICON.extinguisher}</div>No equipment logged at this site yet.</div>`;
@@ -1114,9 +1128,9 @@ function paintEquipment(){
   wrap.innerHTML = list.map(e=>{
     const dueInfo = dueStatus(e);
     const inspected = !!e.inspectionDate;
-    const statusClass = !inspected ? '' : (e.status==='fail' ? 'fail' : (dueInfo.overdue ? 'due' : (e.status==='attention' ? 'due' : 'pass')));
-    return `<div class="tag-card status-${statusClass}" onclick="openEquipmentDetail('${e.id}')">
-      <div class="tag-hole"></div>
+    const rechargeOut = e.rechargeRequired && !e.rechargeDate;
+    const statusClass = rechargeOut ? 'fail' : (!inspected ? '' : (e.status==='fail' ? 'fail' : (dueInfo.overdue ? 'due' : (e.status==='attention' ? 'due' : 'pass'))));
+    return `<div class="tag-card status-${statusClass}" onclick="openEquipmentForm('${e.id}')">
       <div class="tag-body">
         <div class="type">${escapeHtml(typeLabel(e.type))} ${e.size?('· '+escapeHtml(e.size)):''}${e.make?(' · '+escapeHtml(e.make)):''}</div>
         <div class="sub">${escapeHtml(e.location||'No location noted')}${e.serial?(' · Tag '+escapeHtml(e.serial)):''}</div>
@@ -1124,6 +1138,7 @@ function paintEquipment(){
           ${inspected
             ? `<span class="pill ${e.status==='fail'?'fail':(e.status==='attention'?'due':'pass')}">${statusLabel(e.status)}</span>`
             : `<span class="pill">Not yet inspected</span>`}
+          ${rechargeOut ? `<span class="pill fail">Recharge required</span>` : ''}
           ${e.nextServiceDue ? `<span class="pill ${dueInfo.serviceOverdue?'due':''}">Service due ${escapeHtml(e.nextServiceDue)}</span>` : ''}
           ${e.pressureTestDue ? `<span class="pill ${dueInfo.pressureOverdue?'due':''}">Pressure test ${escapeHtml(e.pressureTestDue)}</span>` : ''}
         </div>
@@ -1143,69 +1158,6 @@ function renderEquipFilterChips(counts){
     `<button class="chip ${equipmentFilter===k?'active':''}" onclick="setEquipFilter('${k}')">${escapeHtml(label)}</button>`).join('');
 }
 function setEquipFilter(k){ equipmentFilter = k; paintEquipment(); }
-
-/* ---------- Service run — walk a site, log every inspection in sequence ---------- */
-let serviceRun = { active:false, queue:[], index:0 };
-
-function updateServiceRunCard(){
-  const card = document.getElementById('serviceRunCard');
-  const show = equipmentCache.length > 0 && !serviceRun.active;
-  card.style.display = show ? 'block' : 'none';
-  if(show){
-    document.getElementById('serviceRunSummary').textContent =
-      `Log inspections for all ${equipmentCache.length} item${equipmentCache.length===1?'':'s'} back to back`;
-  }
-}
-
-function startServiceRun(){
-  if(!equipmentCache.length) return;
-  const ordered = equipmentCache.slice().sort((a,b)=>
-    (a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
-  serviceRun = { active:true, queue: ordered.map(e=>e.id), index:0 };
-  advanceServiceRun();
-}
-
-function advanceServiceRun(){
-  if(!serviceRun.active) return;
-  if(serviceRun.index >= serviceRun.queue.length){ endServiceRun(true); return; }
-  const eqId = serviceRun.queue[serviceRun.index];
-  if(!equipmentCache.find(x=>x.id===eqId)){ serviceRun.index++; advanceServiceRun(); return; }
-  currentEquipmentId = eqId;
-  editingAssetId = eqId;
-  openInspectionForm(null);
-  updateServiceRunBanner();
-}
-
-function skipServiceRunItem(){
-  if(!serviceRun.active) return;
-  serviceRun.index++;
-  advanceServiceRun();
-}
-
-function endServiceRun(finished){
-  const wasActive = serviceRun.active;
-  serviceRun = { active:false, queue:[], index:0 };
-  const banner = document.getElementById('serviceRunBanner');
-  if(banner) banner.style.display = 'none';
-  if(wasActive){
-    toast(finished ? 'Service run complete' : 'Service run ended');
-    if(currentSiteId) openSite(currentSiteId);
-  }
-}
-
-function updateServiceRunBanner(){
-  const b = document.getElementById('serviceRunBanner');
-  if(!b) return;
-  if(!serviceRun.active){ b.style.display = 'none'; return; }
-  b.style.display = 'flex';
-  document.getElementById('serviceRunProgress').textContent =
-    `Service run · ${serviceRun.index + 1} / ${serviceRun.queue.length}`;
-}
-
-function exitInspectionForm(){
-  if(serviceRun.active){ endServiceRun(false); return; }
-  showView('view-equipment-detail');
-}
 
 /* ---------- "Due & overdue" dashboard ---------- */
 async function renderDueDashboard(){
@@ -1245,7 +1197,9 @@ async function renderDueDashboard(){
     consider('Pressure test due', e.pressureTestDue);
     if(e.status==='fail') reasons.push({ label:'Non-compliant', date:null, overdue:true });
     else if(e.status==='attention') reasons.push({ label:'Needs attention', date:null, overdue:false });
-    if(reasons.length) flagged.push({ e, reasons, earliest, overdue: reasons.some(r=>r.overdue) });
+    const rechargeOut = e.rechargeRequired && !e.rechargeDate;
+    if(rechargeOut) reasons.push({ label:'Recharge required', date:null, overdue:true });
+    if(reasons.length) flagged.push({ e, reasons, earliest, overdue: reasons.some(r=>r.overdue), rechargeOut });
   });
 
   if(flagged.length===0){
@@ -1258,7 +1212,7 @@ async function renderDueDashboard(){
     ((a.earliest||'9999-99-99').localeCompare(b.earliest||'9999-99-99')));
 
   const siteName = id => (sitesCache.find(s=>s.id===id)||{}).name || 'Unknown site';
-  wrap.innerHTML = flagged.map(({e, reasons, overdue})=>`
+  wrap.innerHTML = flagged.map(({e, reasons, overdue, rechargeOut})=>`
     <div class="insp-row status-${overdue?'fail':'due'}" onclick="dashboardOpen('${e.siteId}','${e.id}')">
       <div class="top">
         <span class="date">${escapeHtml(typeLabel(e.type))}${e.serial?(' · '+escapeHtml(e.serial)):''}</span>
@@ -1268,12 +1222,27 @@ async function renderDueDashboard(){
       <div class="pillrow" style="margin-top:8px;">
         ${reasons.map(r=>`<span class="pill ${r.overdue?'fail':'due'}">${escapeHtml(r.label)}${r.date?(' '+escapeHtml(r.date)):''}</span>`).join('')}
       </div>
+      ${rechargeOut ? `<div style="margin-top:10px; display:flex; gap:6px; align-items:center;" onclick="event.stopPropagation()">
+        <input type="date" id="rc_${e.id}" value="${today}" style="flex:1;">
+        <button class="btn secondary" style="width:auto; flex-shrink:0; padding:9px 14px;" onclick="markRecharged('${e.id}')">Recharged</button>
+      </div>` : ''}
     </div>`).join('');
+}
+
+async function markRecharged(eqId){
+  const el = document.getElementById('rc_'+eqId);
+  const d = el && el.value;
+  if(!d){ toast('Pick the date the unit was recharged'); return; }
+  try{
+    await db.collection('equipment').doc(eqId).update({ rechargeDate: d });
+    toast('Recharge date recorded');
+    renderDueDashboard();
+  }catch(e){ toast('Error: ' + e.message); }
 }
 
 function dashboardOpen(siteId, eqId){
   openSite(siteId);
-  openEquipmentDetail(eqId);
+  openEquipmentForm(eqId);
 }
 
 function dueStatus(e){
@@ -1290,7 +1259,7 @@ function statusLabel(s){ return s==='fail' ? 'Non-compliant' : (s==='attention' 
    type dropdown, the inspection checklist, the pressure-test interval and the
    card label, so these four never drift apart again.
    category  -> which CHECKLISTS entry to use (falls back to 'default')
-   ptYears   -> years after the service date to auto-fill "pressure test due"
+   ptYears   -> years after the last pressure test to auto-fill "pressure test due"
                 (null = no auto-fill; set manually if it applies)              */
 const EQUIPMENT_TYPES = {
   '1.5kg DCP':    { label:'1.5kg DCP',      category:'default',  ptYears:5 },
@@ -1372,345 +1341,182 @@ function onServiceDateChange(){
   const d = document.getElementById('eqServiceDate').value;
   if(!d) return;
   document.getElementById('eqNextDue').value = addYearsISO(d, 1);
+}
+// Pressure-test intervals run from the last pressure test, not the service date.
+function onPressureTestDateChange(){
+  const d = document.getElementById('eqPressureTestDate').value;
   const y = ptYearsFor(currentInspectionType);
-  if(y) document.getElementById('eqPressureTestDue').value = addYearsISO(d, y);
+  if(d && y) document.getElementById('eqPressureTestDue').value = addYearsISO(d, y);
+}
+// Equipment type drives the checklist and the pressure-test interval.
+function onTypeChange(){
+  currentInspectionType = document.getElementById('eqType').value;
+  setPtHint(currentInspectionType);
+  renderChecklist(currentInspectionType);
+  onPressureTestDateChange();
 }
 
-/* ---------- Asset form (equipment identity only) ---------- */
+/* ---------- Equipment form — identity + current inspection, all in one ---------- */
 let currentPhotoDataUrl = null;   // new photo pending upload
 let currentPhotoURL = null;       // existing uploaded photo URL
 
-function cancelAssetForm(){
-  showView(editingAssetId ? 'view-equipment-detail' : 'view-site-detail');
+function onRechargeReqChange(){
+  const yes = document.getElementById('eqRechargeReq').value === 'yes';
+  document.getElementById('rechargeDateWrap').style.display = yes ? 'block' : 'none';
 }
 
-function openAssetForm(id){
+async function openEquipmentForm(id){
   populateTypeOptions();
   editingAssetId = id;
-  document.getElementById('assetFormTitle').textContent = id ? 'Edit equipment' : 'New equipment';
-  const e = id ? equipmentCache.find(x=>x.id===id) : null;
-  document.getElementById('eqType').value = e ? (e.type||'') : '';
-  document.getElementById('eqSize').value = e ? (e.size||'') : '';
-  document.getElementById('eqMake').value = e ? (e.make||'') : '';
-  document.getElementById('eqSerial').value = e ? (e.serial||'') : '';
+  currentEquipmentId = id;
+  currentChecklistValues = {};
+  currentInspectionType = '';
+  inspectionReadOnly = false;
+  currentPhotoDataUrl = null;
+  currentPhotoURL = null;
+  document.getElementById('eqPhotoInput').value = '';
+  document.getElementById('eqPhotoPreview').style.display = 'none';
+
+  let e = id ? equipmentCache.find(x=>x.id===id) : null;
+  if(id && !e){
+    try{ const d = await db.collection('equipment').doc(id).get(); if(d.exists){ e = {id:d.id, ...d.data()}; currentSiteId = e.siteId; } }
+    catch(_){}
+  }
+
+  document.getElementById('equipFormTitle').textContent = id ? 'Edit equipment' : 'New equipment';
+  document.getElementById('deleteEquipBtn').style.display = (id && currentRole==='admin') ? 'block' : 'none';
+
+  // Identity
+  document.getElementById('eqType').value     = e ? (e.type||'')     : '';
+  document.getElementById('eqSize').value     = e ? (e.size||'')     : '';
+  document.getElementById('eqMake').value     = e ? (e.make||'')     : '';
+  document.getElementById('eqSerial').value   = e ? (e.serial||'')   : '';
   document.getElementById('eqLocation').value = e ? (e.location||'') : '';
-  document.getElementById('eqMfgDate').value = e ? (e.mfgDate||'') : '';
+  document.getElementById('eqMfgDate').value  = e ? (e.mfgDate||'')  : '';
+
+  currentInspectionType = e ? (e.type||'') : '';
+
+  // Service / inspection
+  document.getElementById('eqServiceDate').value       = e ? (e.serviceDate||'')      : '';
+  document.getElementById('eqInspDate').value          = e ? (e.inspectionDate||'')   : toLocalISO(new Date());
+  document.getElementById('eqNextDue').value           = e ? (e.nextServiceDue||'')   : '';
+  document.getElementById('eqPressureTestDate').value  = e ? (e.pressureTestDate||'') : '';
+  document.getElementById('eqPressureTestDue').value   = e ? (e.pressureTestDue||'')  : '';
+  document.getElementById('eqStatus').value            = e ? (e.status||'pass')       : 'pass';
+  document.getElementById('eqNotes').value             = e ? (e.notes||'')            : '';
+  currentChecklistValues = Object.assign({}, (e && e.checklist) || {});
+  if(e && e.photoURL){
+    currentPhotoURL = e.photoURL;
+    const p = document.getElementById('eqPhotoPreview');
+    p.src = e.photoURL; p.style.display = 'block';
+  }
+
+  // Recharge
+  const rechargeYes = !!(e && e.rechargeRequired);
+  document.getElementById('eqRechargeReq').value = rechargeYes ? 'yes' : 'no';
+  document.getElementById('eqRechargeDate').value = e ? (e.rechargeDate||'') : '';
+  onRechargeReqChange();
+
+  // Technician — show whoever last serviced it, otherwise the current user
+  const techName = (e && e.technicianName) || currentProfile.name || '';
+  const techSaqcc = (e && e.technicianName) ? (e.saqcc||'') : (currentProfile.saqcc||'');
+  document.getElementById('eqTechDisplay').textContent = techName + (techSaqcc ? (' · ' + techSaqcc) : '');
+
+  setPtHint(currentInspectionType);
+  renderChecklist(currentInspectionType);
   showView('view-equipment-form');
 }
 
-async function saveAsset(){
+async function saveEquipment(){
   const type = document.getElementById('eqType').value;
   if(!type){ toast('Select an equipment type'); return; }
-  const identity = {
-    type,
-    size: document.getElementById('eqSize').value.trim(),
-    make: document.getElementById('eqMake').value.trim(),
-    serial: document.getElementById('eqSerial').value.trim(),
-    location: document.getElementById('eqLocation').value.trim(),
-    mfgDate: document.getElementById('eqMfgDate').value || null
-  };
-  try{
-    if(editingAssetId){
-      await db.collection('equipment').doc(editingAssetId).update(identity);
-      toast('Equipment updated');
-      openEquipmentDetail(editingAssetId);
-    } else {
-      identity.siteId = currentSiteId;
-      identity.schemaVersion = 2;
-      identity.createdBy = currentUser.uid;
-      identity.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      const ref = await db.collection('equipment').add(identity);
-      toast('Equipment added — now log its first inspection');
-      openEquipmentDetail(ref.id);
-    }
-  }catch(e){ toast('Error saving: ' + e.message); }
-}
-
-async function deleteAsset(){
-  if(!currentEquipmentId || currentRole!=='admin') return;
-  const e = equipmentCache.find(x=>x.id===currentEquipmentId);
-  if(!confirm(`Delete ${e?typeLabel(e.type):'this equipment'} and its entire inspection history? This cannot be undone.`)) return;
-  try{
-    const inspSnap = await db.collection('equipment').doc(currentEquipmentId).collection('inspections').get();
-    let docs = inspSnap.docs.slice();
-    while(docs.length){                       // Firestore caps a batch at 500 writes
-      const batch = db.batch();
-      docs.splice(0,450).forEach(d=>batch.delete(d.ref));
-      await batch.commit();
-    }
-    await db.collection('equipment').doc(currentEquipmentId).delete();
-    toast('Equipment deleted');
-    showView('view-site-detail');
-  }catch(e){ toast('Error: ' + e.message); }
-}
-
-/* ---------- Asset detail: identity card + inspection history ---------- */
-let inspectionsCache = [];
-
-function openEquipmentDetail(id){
-  currentEquipmentId = id;
-  editingAssetId = id;   // so the asset form's back button returns here
-  inspectionsCache = [];
-  document.getElementById('inspectionList').innerHTML = '';
-  paintAssetIdentity();
-  if(unsubInspections) unsubInspections();
-  unsubInspections = db.collection('equipment').doc(id).collection('inspections')
-    .onSnapshot(snap=>{
-      inspectionsCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      inspectionsCache.sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
-      paintInspections();
-    }, err=>{ toast('Could not load inspection history: ' + err.message); });
-  showView('view-equipment-detail');
-  maybeMigrateAsset(id);
-}
-
-function paintAssetIdentity(){
-  const e = equipmentCache.find(x=>x.id===currentEquipmentId);
-  if(!e) return;
-  document.getElementById('assetDetailTitle').textContent = typeLabel(e.type);
-  document.getElementById('deleteAssetBtn').style.display = currentRole==='admin' ? 'block' : 'none';
-  const rows = [
-    ['Weight / size', e.size],
-    ['Make', e.make],
-    ['Asset tag / serial', e.serial],
-    ['Location', e.location],
-    ['Manufacture date', e.mfgDate]
-  ].filter(([,v])=>v);
-  document.getElementById('assetIdentity').innerHTML =
-    `<div class="kv"><span class="k">Type</span><span class="v">${escapeHtml(typeLabel(e.type))}</span></div>` +
-    rows.map(([k,v])=>`<div class="kv"><span class="k">${k}</span><span class="v">${escapeHtml(v)}</span></div>`).join('');
-}
-
-function paintInspections(){
-  const wrap = document.getElementById('inspectionList');
-  const e = equipmentCache.find(x=>x.id===currentEquipmentId) || {};
-  let rows = inspectionsCache.slice();
-  // Un-migrated asset: show its inline inspection as a read-only legacy entry
-  // until maybeMigrateAsset() promotes it to a real doc.
-  if(e.schemaVersion !== 2 && e.inspectionDate){
-    rows.push({ id:'__legacy__', legacy:true, inspectionDate:e.inspectionDate, status:e.status,
-      technicianName:e.technicianName, nextServiceDue:e.nextServiceDue, pressureTestDue:e.pressureTestDue });
-    rows.sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
-  }
-  if(rows.length===0){
-    wrap.innerHTML = `<div class="empty">No inspections logged yet. Tap “+ Log inspection” above.</div>`;
-    return;
-  }
-  wrap.innerHTML = rows.map(i=>{
-    const dueInfo = dueStatus(i);
-    const cls = i.status==='fail' ? 'fail' : (dueInfo.overdue || i.status==='attention' ? 'due' : 'pass');
-    const onclick = i.legacy ? '' : `onclick="openInspectionForm('${i.id}')"`;
-    return `<div class="insp-row status-${cls}" ${onclick} style="${i.legacy?'cursor:default;opacity:0.7;':''}">
-      <div class="top">
-        <span class="date">${escapeHtml(i.inspectionDate||'—')}</span>
-        <span class="pill ${i.status==='fail'?'fail':(i.status==='attention'?'due':'pass')}">${statusLabel(i.status)}</span>
-      </div>
-      <div class="sub">${escapeHtml(i.technicianName||'')}${i.legacy?' · pre-history record':''}${i.nextServiceDue?` · next service ${escapeHtml(i.nextServiceDue)}`:''}</div>
-    </div>`;
-  }).join('');
-}
-
-/* One-time, silent migration: promote an old asset's inline inspection fields
-   into the first entry of its inspections subcollection, then stamp schemaVersion 2. */
-async function maybeMigrateAsset(id){
-  const e = equipmentCache.find(x=>x.id===id);
-  if(!e || e.schemaVersion === 2 || !e.inspectionDate) return;
-  try{
-    const parentRef = db.collection('equipment').doc(id);
-    const inspRef = parentRef.collection('inspections').doc();
-    const batch = db.batch();
-    batch.set(inspRef, {
-      siteId: e.siteId, equipmentId: id,
-      inspectionDate: e.inspectionDate || null,
-      serviceDate: e.serviceDate || null,
-      nextServiceDue: e.nextServiceDue || null,
-      pressureTestDue: e.pressureTestDue || null,
-      checklist: e.checklist || {},
-      status: e.status || 'pass',
-      notes: e.notes || '',
-      photoURL: e.photoURL || null,
-      technicianId: e.technicianId || null,
-      technicianName: e.technicianName || '',
-      saqcc: e.saqcc || '',
-      migratedFromInline: true,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    batch.update(parentRef, { schemaVersion: 2, lastInspectionId: inspRef.id });
-    await batch.commit();
-  }catch(err){ /* stays on the legacy display path; retried on next open */ }
-}
-
-/* ---------- Inspection form ---------- */
-function openInspectionForm(inspId){
-  const e = equipmentCache.find(x=>x.id===currentEquipmentId);
-  if(!e){ toast('Equipment not found'); return; }
-  editingInspectionId = inspId || null;
-  currentInspectionType = e.type || '';
-  currentChecklistValues = {};
-  currentPhotoDataUrl = null;
-  currentPhotoURL = null;
-  document.getElementById('eqPhotoInput').value='';
-  const preview = document.getElementById('eqPhotoPreview');
-  preview.style.display='none';
-  document.getElementById('inspAssetDisplay').textContent =
-    typeLabel(e.type) + (e.serial?(' · '+e.serial):'') + (e.location?(' · '+e.location):'');
-
-  const i = inspId ? inspectionsCache.find(x=>x.id===inspId) : null;
-  inspectionReadOnly = !!(i && currentRole !== 'admin');
-
-  if(i){
-    document.getElementById('inspFormTitle').textContent = inspectionReadOnly ? 'Inspection' : 'Edit inspection';
-    currentChecklistValues = Object.assign({}, i.checklist || {});
-    document.getElementById('eqServiceDate').value = i.serviceDate || '';
-    document.getElementById('eqInspDate').value = i.inspectionDate || '';
-    document.getElementById('eqNextDue').value = i.nextServiceDue || '';
-    document.getElementById('eqPressureTestDue').value = i.pressureTestDue || '';
-    document.getElementById('eqStatus').value = i.status || 'pass';
-    document.getElementById('eqNotes').value = i.notes || '';
-    document.getElementById('eqTechDisplay').textContent = (i.technicianName||'') + (i.saqcc ? (' · ' + i.saqcc) : '');
-    if(i.photoURL){ currentPhotoURL = i.photoURL; preview.src = i.photoURL; preview.style.display='block'; }
-  } else {
-    document.getElementById('inspFormTitle').textContent = 'Log inspection';
-    ['eqServiceDate','eqInspDate','eqNextDue','eqPressureTestDue','eqNotes'].forEach(idn=>document.getElementById(idn).value='');
-    document.getElementById('eqStatus').value = 'pass';
-    document.getElementById('eqInspDate').value = toLocalISO(new Date());
-    document.getElementById('eqTechDisplay').textContent = currentProfile.name + (currentProfile.saqcc ? (' · ' + currentProfile.saqcc) : '');
-  }
-  setPtHint(currentInspectionType);
-  renderChecklist(currentInspectionType);
-
-  ['eqServiceDate','eqInspDate','eqNextDue','eqPressureTestDue','eqStatus','eqNotes','eqPhotoInput'].forEach(idn=>{
-    document.getElementById(idn).disabled = inspectionReadOnly;
-  });
-  document.getElementById('inspFormButtons').style.display = inspectionReadOnly ? 'none' : 'flex';
-  document.getElementById('inspReadonlyNote').style.display = inspectionReadOnly ? 'block' : 'none';
-  document.getElementById('deleteInspBtn').style.display = (i && currentRole==='admin') ? 'block' : 'none';
-
-  updateServiceRunBanner();
-  showView('view-inspection-form');
-}
-
-async function saveInspection(){
-  if(inspectionReadOnly) return;
-  const e = equipmentCache.find(x=>x.id===currentEquipmentId);
-  if(!e){ toast('Equipment not found'); return; }
-  const parentRef = db.collection('equipment').doc(currentEquipmentId);
-  const existing = editingInspectionId ? inspectionsCache.find(x=>x.id===editingInspectionId) : null;
+  const e = editingAssetId ? equipmentCache.find(x=>x.id===editingAssetId) : null;
+  const ref = editingAssetId ? db.collection('equipment').doc(editingAssetId) : null;
 
   let photoURL = currentPhotoURL;
   try{
     if(currentPhotoDataUrl){
       toast('Uploading photo…');
-      const ref = storage.ref('equipment-photos/' + currentEquipmentId + '_' + (editingInspectionId || Date.now()) + '.jpg');
-      await ref.putString(currentPhotoDataUrl, 'data_url');
-      photoURL = await ref.getDownloadURL();
+      const sref = storage.ref('equipment-photos/' + (editingAssetId || Date.now()) + '.jpg');
+      await sref.putString(currentPhotoDataUrl, 'data_url');
+      photoURL = await sref.getDownloadURL();
     }
   }catch(err){
     toast('Photo upload failed, saving without it: ' + err.message);
     photoURL = currentPhotoURL;
   }
 
-  const inspData = {
-    siteId: e.siteId,
-    equipmentId: currentEquipmentId,
+  const rechargeRequired = document.getElementById('eqRechargeReq').value === 'yes';
+  const inspectionDate = document.getElementById('eqInspDate').value || null;
+  const payload = {
+    type,
+    size: document.getElementById('eqSize').value.trim(),
+    make: document.getElementById('eqMake').value.trim(),
+    serial: document.getElementById('eqSerial').value.trim(),
+    location: document.getElementById('eqLocation').value.trim(),
+    mfgDate: document.getElementById('eqMfgDate').value || null,
     serviceDate: document.getElementById('eqServiceDate').value || null,
-    inspectionDate: document.getElementById('eqInspDate').value || null,
+    inspectionDate,
     nextServiceDue: document.getElementById('eqNextDue').value || null,
+    pressureTestDate: document.getElementById('eqPressureTestDate').value || null,
     pressureTestDue: document.getElementById('eqPressureTestDue').value || null,
     checklist: currentChecklistValues,
     status: document.getElementById('eqStatus').value,
     notes: document.getElementById('eqNotes').value.trim(),
     photoURL: photoURL || null,
-    // A new inspection is attributed to whoever logs it. An admin editing an old
-    // one keeps the original technician's attribution.
-    technicianId: existing ? (existing.technicianId||null) : currentUser.uid,
-    technicianName: existing ? (existing.technicianName||'') : currentProfile.name,
-    saqcc: existing ? (existing.saqcc||'') : (currentProfile.saqcc||''),
+    rechargeRequired,
+    rechargeDate: rechargeRequired ? (document.getElementById('eqRechargeDate').value || null) : null,
+    schemaVersion: 2,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
-  // The parent asset carries a denormalised copy of its latest inspection.
-  const snapshot = {
-    status: inspData.status, inspectionDate: inspData.inspectionDate, serviceDate: inspData.serviceDate,
-    nextServiceDue: inspData.nextServiceDue, pressureTestDue: inspData.pressureTestDue,
-    checklist: inspData.checklist, notes: inspData.notes, photoURL: inspData.photoURL,
-    technicianId: inspData.technicianId, technicianName: inspData.technicianName, saqcc: inspData.saqcc,
-    schemaVersion: 2, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
+  // Attribute the record to whoever entered/changed this inspection. An admin
+  // editing only identity fields keeps the original technician's attribution.
+  const inspChanged = !e || inspectionDate !== (e.inspectionDate||null);
+  if(inspChanged || !e || !e.technicianName){
+    payload.technicianId = currentUser.uid;
+    payload.technicianName = currentProfile.name;
+    payload.saqcc = currentProfile.saqcc || '';
+  } else {
+    payload.technicianId = e.technicianId || null;
+    payload.technicianName = e.technicianName || '';
+    payload.saqcc = e.saqcc || '';
+  }
 
   try{
-    const batch = db.batch();
-    let parentPatch = null;   // fields to merge into the asset doc, if any
-
-    // If this asset still holds un-migrated inline inspection data, preserve it
-    // as a history entry before the new snapshot overwrites the parent fields.
-    if(e.schemaVersion !== 2 && e.inspectionDate){
-      batch.set(parentRef.collection('inspections').doc(), {
-        siteId: e.siteId, equipmentId: currentEquipmentId,
-        inspectionDate: e.inspectionDate||null, serviceDate: e.serviceDate||null,
-        nextServiceDue: e.nextServiceDue||null, pressureTestDue: e.pressureTestDue||null,
-        checklist: e.checklist||{}, status: e.status||'pass', notes: e.notes||'',
-        photoURL: e.photoURL||null, technicianId: e.technicianId||null,
-        technicianName: e.technicianName||'', saqcc: e.saqcc||'',
-        migratedFromInline: true, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      parentPatch = { schemaVersion: 2 };   // ensure the asset is marked migrated even if the snapshot below is skipped
-    }
-
-    if(editingInspectionId){
-      batch.update(parentRef.collection('inspections').doc(editingInspectionId), inspData);
-      const others = inspectionsCache.filter(x=>x.id!==editingInspectionId);
-      if(others.every(o=>(o.inspectionDate||'') <= (inspData.inspectionDate||''))){
-        parentPatch = Object.assign({}, snapshot, { lastInspectionId: editingInspectionId });
-      }
+    if(editingAssetId){
+      await ref.update(payload);
+      toast('Equipment saved');
     } else {
-      const inspRef = parentRef.collection('inspections').doc();
-      inspData.createdBy = currentUser.uid;
-      inspData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      batch.set(inspRef, inspData);
-      if(inspectionsCache.every(o=>(o.inspectionDate||'') <= (inspData.inspectionDate||''))){
-        parentPatch = Object.assign({}, snapshot, { lastInspectionId: inspRef.id });
-      }
+      payload.siteId = currentSiteId;
+      payload.createdBy = currentUser.uid;
+      payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('equipment').add(payload);
+      toast('Equipment added');
     }
-    if(parentPatch) batch.update(parentRef, parentPatch);
-    await batch.commit();
-    if(serviceRun.active){
-      serviceRun.index++;
-      toast('Saved — next item');
-      advanceServiceRun();
-    } else {
-      toast('Inspection saved');
-      showView('view-equipment-detail');
-    }
+    showView('view-site-detail');
   }catch(err){ toast('Error saving: ' + err.message); }
 }
 
-async function deleteInspection(){
-  if(!editingInspectionId || currentRole!=='admin') return;
-  if(!confirm('Delete this inspection from the history? This cannot be undone.')) return;
+async function deleteEquipment(){
+  if(!editingAssetId || currentRole!=='admin') return;
+  const e = equipmentCache.find(x=>x.id===editingAssetId);
+  if(!confirm(`Delete ${e?typeLabel(e.type):'this equipment'} and its record? This cannot be undone.`)) return;
   try{
-    const parentRef = db.collection('equipment').doc(currentEquipmentId);
-    await parentRef.collection('inspections').doc(editingInspectionId).delete();
-    // If we removed the latest, roll the asset snapshot back to the next newest.
-    const remaining = inspectionsCache.filter(x=>x.id!==editingInspectionId)
-      .sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
-    const latest = remaining[0];
-    if(latest){
-      await parentRef.update({
-        status: latest.status||'pass', inspectionDate: latest.inspectionDate||null,
-        serviceDate: latest.serviceDate||null, nextServiceDue: latest.nextServiceDue||null,
-        pressureTestDue: latest.pressureTestDue||null, checklist: latest.checklist||{},
-        notes: latest.notes||'', photoURL: latest.photoURL||null,
-        technicianId: latest.technicianId||null, technicianName: latest.technicianName||'',
-        saqcc: latest.saqcc||'', lastInspectionId: latest.id
-      });
-    } else {
-      const del = firebase.firestore.FieldValue.delete();
-      await parentRef.update({ status:del, inspectionDate:del, serviceDate:del, nextServiceDue:del, pressureTestDue:del, lastInspectionId:del });
-    }
-    toast('Inspection deleted');
-    showView('view-equipment-detail');
-  }catch(err){ toast('Error: ' + err.message); }
+    // Clean up any inspection-history docs left from the earlier data model.
+    try{
+      const inspSnap = await db.collection('equipment').doc(editingAssetId).collection('inspections').get();
+      let docs = inspSnap.docs.slice();
+      while(docs.length){
+        const batch = db.batch();
+        docs.splice(0,450).forEach(d=>batch.delete(d.ref));
+        await batch.commit();
+      }
+    }catch(_){}
+    await db.collection('equipment').doc(editingAssetId).delete();
+    toast('Equipment deleted');
+    showView('view-site-detail');
+  }catch(e){ toast('Error: ' + e.message); }
 }
 
 /* ---------- Photo handling (resized before upload) ---------- */
@@ -1881,36 +1687,25 @@ async function exportCSV(){
   toast('Gathering records…');
   if(!companySettings || !companySettings.name) await loadCompanySettings();
 
-  // One row per inspection (full compliance history), plus a blank-inspection
-  // row for any asset that has never been inspected.
+  // One row per equipment item, from its current recorded state.
   const rows = [];
   for(const sid of siteIds){
     const site = sitesCache.find(s=>s.id===sid);
     const eqSnap = await db.collection('equipment').where('siteId','==', sid).get();
     for(const d of eqSnap.docs){
       const e = { id:d.id, ...d.data() };
-      const inspSnap = await db.collection('equipment').doc(e.id).collection('inspections').get();
-      let inspections = inspSnap.docs.map(x=>({id:x.id, ...x.data()}));
-      if(inspections.length===0 && e.inspectionDate){
-        inspections = [{ inspectionDate:e.inspectionDate, serviceDate:e.serviceDate, nextServiceDue:e.nextServiceDue,
-          pressureTestDue:e.pressureTestDue, status:e.status, checklist:e.checklist, notes:e.notes,
-          technicianName:e.technicianName, saqcc:e.saqcc }];
-      }
-      if(inspections.length===0) inspections = [{}];
-      inspections.sort((a,b)=>(b.inspectionDate||'').localeCompare(a.inspectionDate||''));
-      for(const i of inspections){
-        const checklistStr = Object.entries(i.checklist||{}).map(([k,v])=>`${k}:${v}`).join('; ');
-        rows.push([
-          site?site.name:'', typeLabel(e.type), e.size, e.make, e.serial, e.location, e.mfgDate,
-          i.inspectionDate||'', i.serviceDate||'', i.nextServiceDue||'', i.pressureTestDue||'',
-          i.status?statusLabel(i.status):'', checklistStr, i.technicianName||'', i.saqcc||'', i.notes||''
-        ]);
-      }
+      const checklistStr = Object.entries(e.checklist||{}).map(([k,v])=>`${k}:${v}`).join('; ');
+      const rechargeCol = e.rechargeRequired ? (e.rechargeDate ? ('Recharged '+e.rechargeDate) : 'Recharge outstanding') : '';
+      rows.push([
+        site?site.name:'', typeLabel(e.type), e.size, e.make, e.serial, e.location, e.mfgDate,
+        e.inspectionDate||'', e.serviceDate||'', e.nextServiceDue||'', e.pressureTestDate||'', e.pressureTestDue||'',
+        rechargeCol, e.inspectionDate?statusLabel(e.status):'Not inspected', checklistStr, e.technicianName||'', e.saqcc||'', e.notes||''
+      ]);
     }
   }
   if(rows.length===0){ toast('No records to export'); return; }
 
-  const headers = ['Site','Type','Size','Make','Asset Tag / Serial','Location','Manufacture Date','Inspection Date','Service Date','Next Service Due','Pressure Test Due','Overall Status','Checklist','Technician','SAQCC No.','Notes'];
+  const headers = ['Site','Type','Size','Make','Asset Tag / Serial','Location','Manufacture Date','Inspection Date','Service Date','Next Service Due','Last Pressure Test','Pressure Test Due','Recharge','Overall Status','Checklist','Technician','SAQCC No.','Notes'];
   const co = companySettings || {};
   const metaLines = [
     ['Company', co.name], ['Registration', co.reg], ['Address', co.address],
