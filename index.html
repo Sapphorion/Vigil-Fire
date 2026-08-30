@@ -457,6 +457,10 @@
         <div class="hint" id="techPasswordHint">Share this technician number and password with the technician — they can log in immediately with it. There's no in-app way to change it yet, so use a real password you're comfortable sharing.</div>
         <label>SAQCC registration no. (optional)</label><input id="techSaqcc" placeholder="e.g. SAQCC/F/12345">
         <label>Phone (optional)</label><input id="techPhone" placeholder="e.g. 082 123 4567">
+
+        <label style="margin-top:16px;">Permissions</label>
+        <label class="chk" style="border-bottom:none;"><input type="checkbox" id="techCanCalibrate"><span>Calibration — allow this technician to record the workshop's weekly calibration checks (scales and pressure gauges). A "Calibration" tab appears in their app only while this is on.</span></label>
+
         <div class="row" style="margin-top:16px;">
           <button class="btn secondary" onclick="showView('view-technicians')">Cancel</button>
           <button class="btn" onclick="saveTechnician()">Save technician</button>
@@ -513,7 +517,7 @@
 
     <!-- ===== CALIBRATION REGISTER (weekly checks of test equipment) ===== -->
     <section id="view-calibration" class="view">
-      <div class="backbar"><button onclick="showView('view-export')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2>Calibration register</h2></div>
+      <div class="backbar"><button onclick="showView(currentRole==='admin' ? 'view-export' : 'view-sites')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2>Calibration register</h2></div>
       <p class="hint" style="margin:0 0 12px;">SANS 1475 Annex A: the workshop's production-control equipment (weighing scales, working and master pressure gauges) must be checked against reference instruments at least weekly, and recorded in writing. Log each weekly check here.</p>
       <div class="card">
         <label style="margin-top:0;">Record a check</label>
@@ -589,6 +593,7 @@
   <nav class="bottom" id="bottomNav">
     <button id="navSites" class="active" onclick="showView('view-sites')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg></span><span id="navSitesLabel">Sites</span></button>
     <button id="navDue" onclick="showView('view-due')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg></span><span>Due</span></button>
+    <button id="navCalibration" style="display:none;" onclick="showView('view-calibration')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg></span><span>Calib.</span></button>
     <button id="navTechnicians" style="display:none;" onclick="showView('view-technicians')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Techs</span></button>
     <button id="navCompany" style="display:none;" onclick="showView('view-company')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span><span>Company</span></button>
     <button id="navExport" style="display:none;" onclick="showView('view-export')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></span><span>Export</span></button>
@@ -719,6 +724,9 @@ function setupRoleUI(){
   document.getElementById('sitesTitle').textContent = isAdmin ? 'All sites' : 'My sites';
   document.getElementById('navCompany').style.display = isAdmin ? 'flex' : 'none';
   document.getElementById('navExport').style.display = isAdmin ? 'flex' : 'none';
+  // The calibration tab is for technicians the admin has granted the permission.
+  document.getElementById('navCalibration').style.display =
+    (!isAdmin && currentProfile && currentProfile.canCalibrate) ? 'flex' : 'none';
 }
 
 /* ---------- View routing ---------- */
@@ -737,6 +745,7 @@ function showView(id){
   document.getElementById('navTechnicians').classList.toggle('active', ['view-technicians','view-tech-form'].includes(id));
   document.getElementById('navCompany').classList.toggle('active', id==='view-company');
   document.getElementById('navExport').classList.toggle('active', ['view-export','view-calibration','view-report'].includes(id));
+  document.getElementById('navCalibration').classList.toggle('active', ['view-calibration','view-report'].includes(id));
   if(id==='view-sites') renderSites();
   if(id==='view-due') renderDueDashboard();
   if(id==='view-technicians') renderTechnicians();
@@ -1774,7 +1783,11 @@ function paintTechnicians(){
       ? `<span class="pill" style="margin:0;">Deactivated</span>`
       : `<div class="hint" style="margin:0;">${assignedCount} site${assignedCount===1?'':'s'}</div>`;
     return `<div class="card tech-card" onclick="openTechForm('${t.id}')" style="cursor:pointer;${inactive?'opacity:0.55;':''}">
-      <div><div class="name">${escapeHtml(t.name)}</div><div class="meta">Tech no. ${escapeHtml(t.techNumber||'')}${t.saqcc?(' · '+escapeHtml(t.saqcc)):''}</div></div>
+      <div>
+        <div class="name">${escapeHtml(t.name)}</div>
+        <div class="meta">Tech no. ${escapeHtml(t.techNumber||'')}${t.saqcc?(' · '+escapeHtml(t.saqcc)):''}</div>
+        ${(!inactive && t.canCalibrate) ? `<div style="margin-top:6px;"><span class="pill">Calibration</span></div>` : ''}
+      </div>
       ${right}
     </div>`;
   }).join('');
@@ -1806,9 +1819,11 @@ function openTechForm(id){
     document.getElementById('techPasswordHint').textContent = "Passwords can't be changed from here — use Firebase Console → Authentication → Users → Reset password. This field is ignored when editing.";
     document.getElementById('techSaqcc').value = t.saqcc||'';
     document.getElementById('techPhone').value = t.phone||'';
+    document.getElementById('techCanCalibrate').checked = !!t.canCalibrate;
   } else {
     actionBtn.style.display = 'none';
     ['techName','techNumber','techPassword','techSaqcc','techPhone'].forEach(fid=>document.getElementById(fid).value='');
+    document.getElementById('techCanCalibrate').checked = false;
     numberField.disabled = false;
     document.getElementById('techPasswordHint').textContent = 'Share this technician number and password with the technician — they can log in immediately with it.';
   }
@@ -1821,11 +1836,12 @@ async function saveTechnician(){
   const password = document.getElementById('techPassword').value;
   const saqcc = document.getElementById('techSaqcc').value.trim();
   const phone = document.getElementById('techPhone').value.trim();
+  const canCalibrate = document.getElementById('techCanCalibrate').checked;
   if(!name || !techNumber){ toast('Name and technician number are required'); return; }
 
   if(editingTechId){
     try{
-      await db.collection('technicians').doc(editingTechId).update({ name, saqcc, phone });
+      await db.collection('technicians').doc(editingTechId).update({ name, saqcc, phone, canCalibrate });
       toast('Technician updated');
       showView('view-technicians');
     }catch(e){ toast('Error: ' + e.message); }
@@ -1843,7 +1859,7 @@ async function saveTechnician(){
     await secondaryApp.auth().signOut();
     await secondaryApp.delete();
     await db.collection('technicians').doc(newUid).set({
-      name, techNumber, email, role:'technician', saqcc, phone, active:true,
+      name, techNumber, email, role:'technician', saqcc, phone, active:true, canCalibrate,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     await db.collection('technicianLookup').doc(techNumber).set({ email });

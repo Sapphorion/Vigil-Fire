@@ -13,6 +13,10 @@ service cloud.firestore {
       return isSignedIn() &&
         request.auth.uid in get(/databases/$(database)/documents/sites/$(siteId)).data.assignedTo;
     }
+    function canCalibrate() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/technicians/$(request.auth.uid)).data.canCalibrate == true;
+    }
 
     match /technicians/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
@@ -45,11 +49,11 @@ service cloud.firestore {
     }
 
     // Test-equipment calibration register (SANS 1475 Annex A). Weekly checks are
-    // performed by technicians, so any signed-in user may add an entry; only an
-    // admin may change or remove one.
+    // added by an admin or by a technician the admin has granted the
+    // `canCalibrate` permission; only an admin may change or remove an entry.
     match /calibrations/{id} {
       allow read:   if isSignedIn();
-      allow create: if isSignedIn();
+      allow create: if isAdmin() || canCalibrate();
       allow update, delete: if isAdmin();
     }
 
