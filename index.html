@@ -328,15 +328,15 @@
         <div class="divider"></div>
         <label style="margin-top:0;">Service &amp; inspection</label>
         <div class="row">
-          <div><label>Service date</label><input id="eqServiceDate" type="date" onchange="onServiceDateChange()"></div>
-          <div><label>Inspection date</label><input id="eqInspDate" type="date"></div>
+          <div><label>Service month</label><input id="eqServiceDate" type="month" onchange="onServiceDateChange()"></div>
+          <div><label>Inspection month</label><input id="eqInspDate" type="month"></div>
         </div>
-        <div><label>Next service due</label><input id="eqNextDue" type="date"></div>
+        <div><label>Next service due</label><input id="eqNextDue" type="month"></div>
         <div class="row">
-          <div><label>Last pressure test date</label><input id="eqPressureTestDate" type="date" onchange="onPressureTestDateChange()"></div>
-          <div><label>Pressure test due <span id="ptHint" style="text-transform:none;font-weight:500;"></span></label><input id="eqPressureTestDue" type="date"></div>
+          <div><label>Last pressure test</label><input id="eqPressureTestDate" type="month" onchange="onPressureTestDateChange()"></div>
+          <div><label>Pressure test due <span id="ptHint" style="text-transform:none;font-weight:500;"></span></label><input id="eqPressureTestDue" type="month"></div>
         </div>
-        <div class="hint">Next service auto-fills to 1 year after the service date (annual servicing per SANS 1475). Enter the date of the last pressure (hydrostatic) test — "pressure test due" then auto-fills to 5 years later for powder, foam and water extinguishers, or 10 years for CO₂. Hydrants, hose reels, sirens and blankets get no auto-filled date. The pressure test date carries over between services, so you only change it in the year a test is actually done.</div>
+        <div class="hint">Dates are recorded as month and year. Next service auto-fills to 1 year after the service month (annual servicing per SANS 1475). Enter the month of the last pressure (hydrostatic) test — "pressure test due" then auto-fills to 5 years later for powder, foam and water extinguishers, or 10 years for CO₂. Hydrants, hose reels, sirens and blankets get no auto-filled date. The pressure test month carries over between services, so you only change it in the year a test is actually done.</div>
 
         <div class="divider"></div>
         <label style="margin-top:0;">Recharge required?</label>
@@ -345,8 +345,8 @@
           <option value="yes">Yes — recharge needed</option>
         </select>
         <div id="rechargeDateWrap" style="display:none;">
-          <label>Date recharged</label>
-          <input id="eqRechargeDate" type="date">
+          <label>Month recharged</label>
+          <input id="eqRechargeDate" type="month">
         </div>
         <div class="hint">A "recharge needed" item stays on the Due list until its recharge date is filled in — the technician can add that date from Due once the unit is back. Per SACAS, the printable register can't be generated while any recharge on the site is still outstanding.</div>
 
@@ -381,7 +381,7 @@
     <!-- ===== DUE & OVERDUE DASHBOARD (shared) ===== -->
     <section id="view-due" class="view">
       <div class="section-title"><h2>Due &amp; overdue</h2></div>
-      <p class="hint" style="margin:0 0 12px 0;">Equipment overdue or due within 30 days, plus anything awaiting a recharge, across your sites. Tap an item to open it, or record a recharge date right here.</p>
+      <p class="hint" style="margin:0 0 12px 0;">Equipment overdue or due this month or next, plus anything awaiting a recharge, across your sites. Tap an item to open it, or record a recharge month right here.</p>
       <div id="dueList"><div class="empty">Loading…</div></div>
     </section>
 
@@ -925,10 +925,10 @@ async function openCertificate(siteId){
     <td>${escapeHtml(typeLabel(e.type))}</td>
     <td>${escapeHtml(e.serial||'')}</td>
     <td>${escapeHtml(e.location||'')}</td>
-    <td>${escapeHtml(e.serviceDate||'')}</td>
-    <td>${escapeHtml(e.nextServiceDue||'')}</td>
-    <td>${escapeHtml(e.pressureTestDate||'')}</td>
-    <td>${escapeHtml(e.pressureTestDue||'')}</td>
+    <td>${escapeHtml(ym(e.serviceDate))}</td>
+    <td>${escapeHtml(ym(e.nextServiceDue))}</td>
+    <td>${escapeHtml(ym(e.pressureTestDate))}</td>
+    <td>${escapeHtml(ym(e.pressureTestDue))}</td>
     <td>${escapeHtml(statusLabel(e.status))}</td>
   </tr>`).join('') || `<tr><td colspan="8">No equipment recorded at this site.</td></tr>`;
 
@@ -993,8 +993,16 @@ async function openRegister(siteId){
   const summaryRows = Object.entries(counts).sort((a,b)=>a[0].localeCompare(b[0]))
     .map(([k,n])=>`<tr><td>${escapeHtml(k)}</td><td style="text-align:right;">${n}</td></tr>`).join('')
     || `<tr><td colspan="2">No equipment recorded.</td></tr>`;
-  const techNames = [...new Set(items.map(e=>e.technicianName).filter(Boolean))];
-  const techLine = techNames.length ? techNames.join(', ') : (currentProfile.name || '');
+  // Technician(s) who worked the site, each with their SAQCC registration no.
+  const techMap = new Map();
+  items.forEach(e=>{
+    if(e.technicianName && !techMap.has(e.technicianName)) techMap.set(e.technicianName, e.saqcc || '');
+    else if(e.technicianName && !techMap.get(e.technicianName) && e.saqcc) techMap.set(e.technicianName, e.saqcc);
+  });
+  if(techMap.size===0 && currentProfile.name) techMap.set(currentProfile.name, currentProfile.saqcc || '');
+  const techLine = [...techMap.entries()]
+    .map(([n,s])=>escapeHtml(n) + ' — ' + (s ? escapeHtml(s) : 'SAQCC no. not on file'))
+    .join('<br>') || '—';
   const rechargedCount = items.filter(e=>e.rechargeRequired && e.rechargeDate).length;
 
   const letterhead = `
@@ -1015,7 +1023,7 @@ async function openRegister(siteId){
       ${site.notes ? '<strong>Site notes:</strong> '+escapeHtml(site.notes)+'<br>' : ''}
       <strong>Generated:</strong> ${today}<br>
       ${site.lastCompletedDate ? '<strong>Last signed off:</strong> '+escapeHtml(site.lastCompletedDate)+(site.lastCompletedBy?(' by '+escapeHtml(site.lastCompletedBy)):'')+'<br>' : ''}
-      <strong>Technician(s):</strong> ${escapeHtml(techLine)}
+      <strong>Technician(s):</strong><br>${techLine}
     </div>
     <h3>Equipment summary</h3>
     <table>
@@ -1036,12 +1044,12 @@ async function openRegister(siteId){
     <td>${escapeHtml(e.serial||'')}</td>
     <td>${escapeHtml(e.location||'')}</td>
     <td>${escapeHtml(e.mfgDate||'')}</td>
-    <td>${escapeHtml(e.inspectionDate||'—')}</td>
-    <td>${escapeHtml(e.serviceDate||'')}</td>
-    <td>${escapeHtml(e.nextServiceDue||'')}</td>
-    <td>${escapeHtml(e.pressureTestDate||'')}</td>
-    <td>${escapeHtml(e.pressureTestDue||'')}</td>
-    <td>${escapeHtml(e.rechargeDate || (e.rechargeRequired ? 'Outstanding' : '—'))}</td>
+    <td>${escapeHtml(ym(e.inspectionDate)||'—')}</td>
+    <td>${escapeHtml(ym(e.serviceDate))}</td>
+    <td>${escapeHtml(ym(e.nextServiceDue))}</td>
+    <td>${escapeHtml(ym(e.pressureTestDate))}</td>
+    <td>${escapeHtml(ym(e.pressureTestDue))}</td>
+    <td>${escapeHtml(ym(e.rechargeDate) || (e.rechargeRequired ? 'Outstanding' : '—'))}</td>
     <td>${escapeHtml(e.inspectionDate ? statusLabel(e.status) : 'Not inspected')}</td>
   </tr>`).join('') || `<tr><td colspan="12">No equipment recorded at this site.</td></tr>`;
 
@@ -1139,8 +1147,8 @@ function paintEquipment(){
             ? `<span class="pill ${e.status==='fail'?'fail':(e.status==='attention'?'due':'pass')}">${statusLabel(e.status)}</span>`
             : `<span class="pill">Not yet inspected</span>`}
           ${rechargeOut ? `<span class="pill fail">Recharge required</span>` : ''}
-          ${e.nextServiceDue ? `<span class="pill ${dueInfo.serviceOverdue?'due':''}">Service due ${escapeHtml(e.nextServiceDue)}</span>` : ''}
-          ${e.pressureTestDue ? `<span class="pill ${dueInfo.pressureOverdue?'due':''}">Pressure test ${escapeHtml(e.pressureTestDue)}</span>` : ''}
+          ${e.nextServiceDue ? `<span class="pill ${dueInfo.serviceOverdue?'due':''}">Service due ${escapeHtml(ym(e.nextServiceDue))}</span>` : ''}
+          ${e.pressureTestDue ? `<span class="pill ${dueInfo.pressureOverdue?'due':''}">Pressure test ${escapeHtml(ym(e.pressureTestDue))}</span>` : ''}
         </div>
       </div>
     </div>`;
@@ -1168,8 +1176,8 @@ async function renderDueDashboard(){
     return;
   }
   wrap.innerHTML = `<div class="empty">Loading…</div>`;
-  const today = toLocalISO(new Date());
-  const horizon = addDaysISO(today, 30);
+  const cm = thisMonth();                 // current month, YYYY-MM
+  const horizonMonth = addMonths(cm, 1);  // include items due this month or next
 
   let items = [];
   try{
@@ -1187,9 +1195,10 @@ async function renderDueDashboard(){
     const reasons = [];
     let earliest = null;
     const consider = (label, date)=>{
-      if(date && date <= horizon){
-        reasons.push({ label, date, overdue: date < today });
-        if(!earliest || date < earliest) earliest = date;
+      const dm = ym(date);
+      if(dm && dm <= horizonMonth){
+        reasons.push({ label, date: dm, overdue: dm < cm });
+        if(!earliest || dm < earliest) earliest = dm;
       }
     };
     if(!e.inspectionDate) reasons.push({ label:'Never inspected', date:null, overdue:true });
@@ -1203,7 +1212,7 @@ async function renderDueDashboard(){
   });
 
   if(flagged.length===0){
-    wrap.innerHTML = `<div class="empty"><div class="big">${ICON.check}</div>Nothing due in the next 30 days.</div>`;
+    wrap.innerHTML = `<div class="empty"><div class="big">${ICON.check}</div>Nothing due this month or next.</div>`;
     return;
   }
 
@@ -1223,7 +1232,7 @@ async function renderDueDashboard(){
         ${reasons.map(r=>`<span class="pill ${r.overdue?'fail':'due'}">${escapeHtml(r.label)}${r.date?(' '+escapeHtml(r.date)):''}</span>`).join('')}
       </div>
       ${rechargeOut ? `<div style="margin-top:10px; display:flex; gap:6px; align-items:center;" onclick="event.stopPropagation()">
-        <input type="date" id="rc_${e.id}" value="${today}" style="flex:1;">
+        <input type="month" id="rc_${e.id}" value="${cm}" style="flex:1;">
         <button class="btn secondary" style="width:auto; flex-shrink:0; padding:9px 14px;" onclick="markRecharged('${e.id}')">Recharged</button>
       </div>` : ''}
     </div>`).join('');
@@ -1232,7 +1241,7 @@ async function renderDueDashboard(){
 async function markRecharged(eqId){
   const el = document.getElementById('rc_'+eqId);
   const d = el && el.value;
-  if(!d){ toast('Pick the date the unit was recharged'); return; }
+  if(!d){ toast('Pick the month the unit was recharged'); return; }
   try{
     await db.collection('equipment').doc(eqId).update({ rechargeDate: d });
     toast('Recharge date recorded');
@@ -1246,9 +1255,9 @@ function dashboardOpen(siteId, eqId){
 }
 
 function dueStatus(e){
-  const today = toLocalISO(new Date());
-  const serviceOverdue = e.nextServiceDue && e.nextServiceDue < today;
-  const pressureOverdue = e.pressureTestDue && e.pressureTestDue < today;
+  const cm = thisMonth();
+  const serviceOverdue = !!e.nextServiceDue && ym(e.nextServiceDue) < cm;
+  const pressureOverdue = !!e.pressureTestDue && ym(e.pressureTestDue) < cm;
   return {serviceOverdue, pressureOverdue, overdue: serviceOverdue || pressureOverdue};
 }
 function typeLabel(t){ return (EQUIPMENT_TYPES[t]||{}).label || t; }
@@ -1327,26 +1336,32 @@ function setCheck(key, val){
 function toLocalISO(dt){
   return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,10);
 }
-function addYearsISO(iso, years){
-  const d = new Date(iso+'T00:00:00');
-  d.setFullYear(d.getFullYear()+years);
-  return toLocalISO(d);
+/* ---- month-granularity helpers (inspection dates are recorded as YYYY-MM) ---- */
+function thisMonth(){ return toLocalISO(new Date()).slice(0,7); }
+function ym(s){ return s ? String(s).slice(0,7) : ''; }          // normalise any date/month string to YYYY-MM
+function addYearsMonth(m, years){
+  m = ym(m);
+  if(!/^\d{4}-\d{2}$/.test(m)) return '';
+  const [y, mm] = m.split('-');
+  return String(Number(y) + years).padStart(4,'0') + '-' + mm;
 }
-function addDaysISO(iso, days){
-  const d = new Date(iso+'T00:00:00');
-  d.setDate(d.getDate()+days);
-  return toLocalISO(d);
+function addMonths(m, n){
+  m = ym(m);
+  if(!/^\d{4}-\d{2}$/.test(m)) return '';
+  let [y, mm] = m.split('-').map(Number);
+  const tot = y*12 + (mm-1) + n;
+  return String(Math.floor(tot/12)).padStart(4,'0') + '-' + String(tot%12 + 1).padStart(2,'0');
 }
 function onServiceDateChange(){
   const d = document.getElementById('eqServiceDate').value;
   if(!d) return;
-  document.getElementById('eqNextDue').value = addYearsISO(d, 1);
+  document.getElementById('eqNextDue').value = addYearsMonth(d, 1);
 }
 // Pressure-test intervals run from the last pressure test, not the service date.
 function onPressureTestDateChange(){
   const d = document.getElementById('eqPressureTestDate').value;
   const y = ptYearsFor(currentInspectionType);
-  if(d && y) document.getElementById('eqPressureTestDue').value = addYearsISO(d, y);
+  if(d && y) document.getElementById('eqPressureTestDue').value = addYearsMonth(d, y);
 }
 // Equipment type drives the checklist and the pressure-test interval.
 function onTypeChange(){
@@ -1396,13 +1411,13 @@ async function openEquipmentForm(id){
 
   currentInspectionType = e ? (e.type||'') : '';
 
-  // Service / inspection
-  document.getElementById('eqServiceDate').value       = e ? (e.serviceDate||'')      : '';
-  document.getElementById('eqInspDate').value          = e ? (e.inspectionDate||'')   : toLocalISO(new Date());
-  document.getElementById('eqNextDue').value           = e ? (e.nextServiceDue||'')   : '';
-  document.getElementById('eqPressureTestDate').value  = e ? (e.pressureTestDate||'') : '';
-  document.getElementById('eqPressureTestDue').value   = e ? (e.pressureTestDue||'')  : '';
-  document.getElementById('eqStatus').value            = e ? (e.status||'pass')       : 'pass';
+  // Service / inspection — stored and shown as YYYY-MM (month + year)
+  document.getElementById('eqServiceDate').value       = e ? ym(e.serviceDate)      : '';
+  document.getElementById('eqInspDate').value          = e ? ym(e.inspectionDate)   : thisMonth();
+  document.getElementById('eqNextDue').value           = e ? ym(e.nextServiceDue)   : '';
+  document.getElementById('eqPressureTestDate').value  = e ? ym(e.pressureTestDate) : '';
+  document.getElementById('eqPressureTestDue').value   = e ? ym(e.pressureTestDue)  : '';
+  document.getElementById('eqStatus').value            = e ? (e.status||'pass')     : 'pass';
   document.getElementById('eqNotes').value             = e ? (e.notes||'')            : '';
   currentChecklistValues = Object.assign({}, (e && e.checklist) || {});
   if(e && e.photoURL){
@@ -1414,7 +1429,7 @@ async function openEquipmentForm(id){
   // Recharge
   const rechargeYes = !!(e && e.rechargeRequired);
   document.getElementById('eqRechargeReq').value = rechargeYes ? 'yes' : 'no';
-  document.getElementById('eqRechargeDate').value = e ? (e.rechargeDate||'') : '';
+  document.getElementById('eqRechargeDate').value = e ? ym(e.rechargeDate) : '';
   onRechargeReqChange();
 
   // Technician — show whoever last serviced it, otherwise the current user
@@ -1472,7 +1487,7 @@ async function saveEquipment(){
 
   // Attribute the record to whoever entered/changed this inspection. An admin
   // editing only identity fields keeps the original technician's attribution.
-  const inspChanged = !e || inspectionDate !== (e.inspectionDate||null);
+  const inspChanged = !e || ym(inspectionDate) !== ym(e.inspectionDate);
   if(inspChanged || !e || !e.technicianName){
     payload.technicianId = currentUser.uid;
     payload.technicianName = currentProfile.name;
@@ -1695,10 +1710,10 @@ async function exportCSV(){
     for(const d of eqSnap.docs){
       const e = { id:d.id, ...d.data() };
       const checklistStr = Object.entries(e.checklist||{}).map(([k,v])=>`${k}:${v}`).join('; ');
-      const rechargeCol = e.rechargeRequired ? (e.rechargeDate ? ('Recharged '+e.rechargeDate) : 'Recharge outstanding') : '';
+      const rechargeCol = e.rechargeRequired ? (e.rechargeDate ? ('Recharged '+ym(e.rechargeDate)) : 'Recharge outstanding') : '';
       rows.push([
         site?site.name:'', typeLabel(e.type), e.size, e.make, e.serial, e.location, e.mfgDate,
-        e.inspectionDate||'', e.serviceDate||'', e.nextServiceDue||'', e.pressureTestDate||'', e.pressureTestDue||'',
+        ym(e.inspectionDate), ym(e.serviceDate), ym(e.nextServiceDue), ym(e.pressureTestDate), ym(e.pressureTestDue),
         rechargeCol, e.inspectionDate?statusLabel(e.status):'Not inspected', checklistStr, e.technicianName||'', e.saqcc||'', e.notes||''
       ]);
     }
