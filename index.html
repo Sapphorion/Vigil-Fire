@@ -20,11 +20,21 @@
 
 <style>
   :root{
-    --ink:#1C1C1C; --paper:#FAF9F6; --paper-dim:#F0EEE8;
+    /* Field-service / industrial palette */
+    --ink:#17191C;            /* primary text */
+    --ink-soft:#3F454C;       /* secondary text / read-only values */
+    --paper:#EEF1F4;          /* app background + input fields */
+    --paper-dim:#E1E5EA;      /* wells, secondary buttons, neutral pills */
+    --surface:#FFFFFF;        /* cards */
+    --header:#1A1D21;         /* dark chrome: top bar + login */
     --red:#C8102E; --red-dark:#8F0B21;
-    --amber:#B9790A; --amber-bg:#FBEBCF;
-    --green:#1F7A4D; --green-bg:#E1F0E7;
-    --grey:#6B7280; --line:#DDD8CE; --radius:10px;
+    --amber:#A85D00; --amber-bg:#FAEBCF;
+    --green:#1C7A46; --green-bg:#E0EFE7;
+    --grey:#63696F;           /* muted text */
+    --line:#D5D9DE;           /* hairline rules / card borders */
+    --line-strong:#BFC5CC;    /* input + control borders */
+    --radius:10px;
+    --focus:0 0 0 3px rgba(200,16,46,0.28);
     font-size:16px;
   }
   *{box-sizing:border-box;}
@@ -32,123 +42,152 @@
   body{
     background:var(--paper); color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    -webkit-tap-highlight-color:transparent; padding-bottom:84px;
+    -webkit-tap-highlight-color:transparent; padding-bottom:84px; line-height:1.5;
   }
-  h1,h2,h3{margin:0 0 4px 0; font-weight:800;}
-  header.top{
-    position:sticky; top:0; z-index:20; background:var(--ink); color:var(--paper);
-    padding:14px 16px 12px 16px; display:flex; align-items:center; justify-content:space-between;
-    box-shadow:0 2px 8px rgba(0,0,0,0.15);
-  }
-  header.top .brand{display:flex; align-items:center; gap:10px;}
-  header.top .mark{width:34px; height:34px; border-radius:8px; background:var(--red);
-    display:flex; align-items:center; justify-content:center; font-weight:900; font-size:1rem; flex-shrink:0;}
-  header.top .titles{line-height:1.15;}
-  header.top .titles .t1{font-weight:800; font-size:1rem;}
-  header.top .titles .t2{font-size:0.7rem; color:#C9C6BE;}
-  header.top .right{display:flex; align-items:center; gap:8px;}
-  #syncPill{font-size:0.65rem; font-weight:700; padding:4px 9px; border-radius:999px; background:rgba(255,255,255,0.1); text-transform:uppercase; letter-spacing:0.03em;}
-  #syncPill.offline{background:var(--amber-bg); color:var(--amber);}
-  #logoutBtn{background:none; border:1px solid rgba(255,255,255,0.25); color:var(--paper); border-radius:8px; padding:6px 10px; font-size:0.75rem; cursor:pointer;}
+  h1,h2,h3{margin:0 0 4px 0; font-weight:700; letter-spacing:-0.01em; color:var(--ink);}
+  svg{display:block;}
 
-  main{padding:16px; max-width:640px; margin:0 auto;}
-  .card{background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:14px;}
-  .btn{display:inline-flex; align-items:center; justify-content:center; gap:6px; background:var(--red); color:#fff;
-    border:none; border-radius:8px; padding:13px 18px; font-size:0.95rem; font-weight:700; cursor:pointer; width:100%;}
+  header.top{
+    position:sticky; top:0; z-index:20; background:var(--header); color:#fff;
+    padding:12px 16px; display:flex; align-items:center; justify-content:space-between;
+    border-bottom:3px solid var(--red);
+  }
+  header.top .brand{display:flex; align-items:center; gap:11px;}
+  header.top .mark{width:34px; height:34px; border-radius:7px; background:var(--red);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  header.top .mark svg{width:20px; height:20px; stroke:#fff; fill:none;}
+  header.top .titles{line-height:1.2;}
+  header.top .titles .t1{font-weight:700; font-size:0.98rem; letter-spacing:0.05em; text-transform:uppercase;}
+  header.top .titles .t2{font-size:0.68rem; color:#9AA0A6; letter-spacing:0.02em; margin-top:1px;}
+  header.top .right{display:flex; align-items:center; gap:8px;}
+  #syncPill{font-size:0.6rem; font-weight:700; padding:4px 9px; border-radius:4px; background:rgba(255,255,255,0.12);
+    text-transform:uppercase; letter-spacing:0.06em; display:inline-flex; align-items:center; gap:5px;}
+  #syncPill::before{content:""; width:6px; height:6px; border-radius:50%; background:#3FBF6B; flex-shrink:0;}
+  #syncPill.offline{background:var(--amber-bg); color:#7A4400;}
+  #syncPill.offline::before{background:var(--amber);}
+  #logoutBtn{background:none; border:1px solid rgba(255,255,255,0.28); color:#fff; border-radius:6px; padding:6px 11px; font-size:0.72rem; font-weight:600; cursor:pointer; letter-spacing:0.02em;}
+  #logoutBtn:active{background:rgba(255,255,255,0.1);}
+
+  main{padding:16px; max-width:680px; margin:0 auto;}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:14px;}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:7px; background:var(--red); color:#fff;
+    border:none; border-radius:8px; padding:13px 18px; font-size:0.95rem; font-weight:650; cursor:pointer; width:100%;
+    letter-spacing:0.01em; box-shadow:0 1px 2px rgba(23,25,28,0.12);}
+  .btn svg{width:17px; height:17px; flex-shrink:0;}
   .btn:active{background:var(--red-dark);}
-  .btn.secondary{background:var(--paper-dim); color:var(--ink); border:1px solid var(--line);}
-  .btn.ghost{background:transparent; color:var(--grey); border:1px dashed var(--line);}
+  .btn.secondary{background:var(--surface); color:var(--ink); border:1px solid var(--line-strong); box-shadow:none;}
+  .btn.secondary:active{background:var(--paper-dim);}
+  .btn.ghost{background:transparent; color:var(--grey); border:1px dashed var(--line-strong); box-shadow:none; font-weight:600;}
   .row{display:flex; gap:10px;}
   .row > *{flex:1;}
 
-  label{display:block; font-size:0.78rem; font-weight:700; color:var(--grey); margin:14px 0 5px 0; text-transform:uppercase; letter-spacing:0.03em;}
+  label{display:block; font-size:0.72rem; font-weight:700; color:var(--grey); margin:14px 0 5px 0; text-transform:uppercase; letter-spacing:0.06em;}
   label:first-child{margin-top:0;}
-  input, select, textarea{width:100%; padding:11px 12px; font-size:1rem; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); font-family:inherit;}
+  input, select, textarea{width:100%; padding:11px 12px; font-size:1rem; border:1px solid var(--line-strong); border-radius:7px; background:var(--paper); color:var(--ink); font-family:inherit;}
   textarea{resize:vertical; min-height:60px;}
-  input:focus, select:focus, textarea:focus{outline:2px solid var(--red); outline-offset:1px;}
-  .readonly-field{padding:11px 12px; background:var(--paper-dim); border-radius:8px; font-size:0.95rem; color:var(--ink); border:1px solid var(--line);}
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--red); box-shadow:var(--focus);}
+  .readonly-field{padding:11px 12px; background:var(--paper-dim); border-radius:7px; font-size:0.95rem; color:var(--ink-soft); border:1px solid var(--line);}
 
-  .checklist-item{display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line);}
+  .checklist-item{display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--line);}
   .checklist-item:last-child{border-bottom:none;}
   .checklist-item .label{font-size:0.9rem; flex:1; padding-right:10px;}
-  .toggle{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden;}
-  .toggle button{border:none; background:#fff; padding:7px 12px; font-size:0.8rem; font-weight:700; color:var(--grey); cursor:pointer;}
-  .toggle button.active.pass{background:var(--green-bg); color:var(--green);}
-  .toggle button.active.fail{background:#FBE1E4; color:var(--red-dark);}
+  .toggle{display:flex; border:1px solid var(--line-strong); border-radius:7px; overflow:hidden; flex-shrink:0;}
+  .toggle button{border:none; background:var(--surface); padding:7px 14px; font-size:0.74rem; font-weight:700; color:var(--grey); cursor:pointer; text-transform:uppercase; letter-spacing:0.04em;}
+  .toggle button + button{border-left:1px solid var(--line-strong);}
+  .toggle button.active.pass{background:var(--green); color:#fff;}
+  .toggle button.active.fail{background:var(--red); color:#fff;}
 
-  .site-card{display:flex; align-items:center; justify-content:space-between; padding:16px; margin-bottom:10px; cursor:pointer;}
-  .site-card .name{font-weight:800; font-size:1.02rem;}
+  .site-card{display:flex; align-items:center; justify-content:space-between; padding:15px 16px; margin-bottom:10px; cursor:pointer;}
+  .site-card:active{border-color:var(--line-strong);}
+  .site-card .name{font-weight:700; font-size:1rem;}
   .site-card .meta{font-size:0.8rem; color:var(--grey); margin-top:2px;}
-  .site-card .count{background:var(--paper-dim); border-radius:999px; padding:4px 10px; font-size:0.75rem; font-weight:700; flex-shrink:0; margin-left:10px;}
-  .site-card .edit-ic{color:var(--grey); font-size:1rem; margin-left:8px;}
+  .site-card .count{background:var(--paper-dim); border-radius:5px; padding:4px 9px; font-size:0.72rem; font-weight:700; flex-shrink:0; margin-left:10px;}
+  .site-card .edit-ic{color:var(--grey); margin-left:8px; display:inline-flex; padding:4px; cursor:pointer;}
+  .site-card .edit-ic svg{width:16px; height:16px;}
 
-  .tag-card{background:#fff; border:1px solid var(--line); border-radius:var(--radius); margin-bottom:12px; overflow:hidden; position:relative; border-left:5px solid var(--grey);}
+  .tag-card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:12px; overflow:hidden; position:relative; border-left:4px solid var(--line-strong);}
   .tag-card.status-pass{border-left-color:var(--green);}
   .tag-card.status-fail{border-left-color:var(--red);}
   .tag-card.status-due{border-left-color:var(--amber);}
-  .tag-card .tag-hole{position:absolute; top:14px; right:14px; width:14px; height:14px; border-radius:50%; background:var(--paper); border:2px solid var(--line);}
-  .tag-card .tag-body{padding:14px 44px 14px 16px;}
-  .tag-card .type{font-weight:800; font-size:0.98rem;}
+  .tag-card .tag-hole{display:none;}
+  .tag-card .tag-body{padding:14px 16px;}
+  .tag-card .type{font-weight:700; font-size:0.97rem;}
   .tag-card .sub{font-size:0.8rem; color:var(--grey); margin-top:2px;}
   .pillrow{display:flex; gap:6px; flex-wrap:wrap;}
   .tag-card .pillrow{margin-top:10px;}
-  .pill{font-size:0.68rem; font-weight:700; padding:3px 9px; border-radius:999px; background:var(--paper-dim); color:var(--grey); text-transform:uppercase; letter-spacing:0.03em;}
+  .pill{font-size:0.66rem; font-weight:700; padding:3px 8px; border-radius:4px; background:var(--paper-dim); color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em;}
   .pill.pass{background:var(--green-bg); color:var(--green);}
   .pill.fail{background:#FBE1E4; color:var(--red-dark);}
   .pill.due{background:var(--amber-bg); color:var(--amber);}
-  .chip{font-size:0.75rem; font-weight:700; padding:6px 12px; border-radius:999px; background:var(--paper-dim); color:var(--grey); border:1px solid var(--line); cursor:pointer;}
-  .chip.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+  .chip{font-size:0.75rem; font-weight:700; padding:6px 12px; border-radius:6px; background:var(--surface); color:var(--ink-soft); border:1px solid var(--line-strong); cursor:pointer;}
+  .chip.active{background:var(--ink); color:#fff; border-color:var(--ink);}
 
   .tech-card{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; margin-bottom:10px;}
-  .tech-card .name{font-weight:800; font-size:0.98rem;}
+  .tech-card .name{font-weight:700; font-size:0.97rem;}
   .tech-card .meta{font-size:0.78rem; color:var(--grey); margin-top:2px;}
   .tech-check{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:0.9rem;}
   .tech-check:last-child{border-bottom:none;}
 
-  .kv{display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--line); font-size:0.9rem;}
+  .kv{display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--line); font-size:0.9rem;}
   .kv:last-child{border-bottom:none;}
-  .kv .k{color:var(--grey); font-weight:700; text-transform:uppercase; font-size:0.72rem; letter-spacing:0.03em; flex-shrink:0;}
+  .kv .k{color:var(--grey); font-weight:700; text-transform:uppercase; font-size:0.68rem; letter-spacing:0.05em; flex-shrink:0;}
   .kv .v{text-align:right;}
-  .insp-row{background:#fff; border:1px solid var(--line); border-left:5px solid var(--grey); border-radius:var(--radius); padding:12px 14px; margin-bottom:10px; cursor:pointer;}
+  .insp-row{background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--line-strong); border-radius:var(--radius); padding:12px 14px; margin-bottom:10px; cursor:pointer;}
   .insp-row.status-pass{border-left-color:var(--green);}
   .insp-row.status-fail{border-left-color:var(--red);}
   .insp-row.status-due{border-left-color:var(--amber);}
   .insp-row .top{display:flex; justify-content:space-between; align-items:center; gap:10px;}
-  .insp-row .date{font-weight:800; font-size:0.95rem;}
+  .insp-row .date{font-weight:700; font-size:0.94rem;}
   .insp-row .sub{font-size:0.8rem; color:var(--grey); margin-top:3px;}
 
-  .empty{text-align:center; padding:40px 20px; color:var(--grey);}
-  .empty .big{font-size:2rem; margin-bottom:8px;}
+  .empty{text-align:center; padding:44px 20px; color:var(--grey); font-size:0.9rem;}
+  .empty .big{display:flex; justify-content:center; margin-bottom:12px;}
+  .empty .big svg{width:40px; height:40px; stroke:var(--line-strong); fill:none;}
 
-  nav.bottom{position:fixed; bottom:0; left:0; right:0; z-index:20; background:#fff; border-top:1px solid var(--line);
-    display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom, 0px)) 6px; box-shadow:0 -2px 8px rgba(0,0,0,0.06);}
-  nav.bottom button{flex:1; background:none; border:none; padding:8px 4px; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--grey); font-size:0.68rem; font-weight:700; cursor:pointer;}
-  nav.bottom button .ic{font-size:1.2rem;}
+  nav.bottom{position:fixed; bottom:0; left:0; right:0; z-index:20; background:var(--surface); border-top:1px solid var(--line);
+    display:flex; padding:6px 6px calc(6px + env(safe-area-inset-bottom, 0px)) 6px;}
+  nav.bottom button{position:relative; flex:1; background:none; border:none; padding:9px 4px 6px; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--grey); font-size:0.62rem; font-weight:700; cursor:pointer; text-transform:uppercase; letter-spacing:0.04em;}
+  nav.bottom button .ic{display:flex;}
+  nav.bottom button .ic svg{width:22px; height:22px; stroke:currentColor; fill:none;}
   nav.bottom button.active{color:var(--red);}
+  nav.bottom button.active::before{content:""; position:absolute; top:0; left:24%; right:24%; height:3px; border-radius:0 0 3px 3px; background:var(--red);}
 
   .view{display:none;} .view.active{display:block;}
-  .section-title{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
-  .section-title h2{font-size:1.05rem;}
-  .backbar{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
-  .backbar button{background:none; border:none; font-size:1.3rem; color:var(--ink); cursor:pointer; padding:4px;}
+  .section-title{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .section-title h2{font-size:1.02rem; text-transform:uppercase; letter-spacing:0.04em; font-weight:700;}
+  .backbar{display:flex; align-items:center; gap:10px; margin-bottom:16px;}
+  .backbar button{display:inline-flex; align-items:center; justify-content:center; background:var(--surface); border:1px solid var(--line-strong); border-radius:7px; width:34px; height:34px; color:var(--ink); cursor:pointer; padding:0; flex-shrink:0;}
+  .backbar button:active{background:var(--paper-dim);}
+  .backbar button svg{width:18px; height:18px;}
+  .backbar h2{font-size:1.05rem;}
   .photo-preview{width:100%; max-height:180px; object-fit:cover; border-radius:8px; margin-top:8px; border:1px solid var(--line);}
-  .hint{font-size:0.76rem; color:var(--grey); margin-top:6px;}
+  .hint{font-size:0.76rem; color:var(--grey); margin-top:6px; line-height:1.5;}
   .divider{height:1px; background:var(--line); margin:16px 0;}
   #toast{position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff;
-    padding:11px 18px; border-radius:999px; font-size:0.85rem; font-weight:600; opacity:0; pointer-events:none;
-    transition:opacity 0.2s ease, transform 0.2s ease; z-index:50; white-space:nowrap; max-width:90vw; overflow:hidden; text-overflow:ellipsis;}
+    padding:11px 18px; border-radius:8px; font-size:0.85rem; font-weight:600; opacity:0; pointer-events:none;
+    transition:opacity 0.2s ease, transform 0.2s ease; z-index:50; white-space:nowrap; max-width:90vw; overflow:hidden; text-overflow:ellipsis;
+    box-shadow:0 6px 24px rgba(0,0,0,0.25);}
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
   /* Login */
-  #authScreen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;}
-  #authScreen .card{width:100%; max-width:360px;}
-  #authScreen .logo{width:52px; height:52px; border-radius:12px; background:var(--red); display:flex; align-items:center; justify-content:center; font-size:1.5rem; margin:0 auto 14px auto;}
-  #authScreen h1{text-align:center; font-size:1.15rem;}
-  #authScreen .sub{text-align:center; color:var(--grey); font-size:0.85rem; margin-bottom:6px;}
+  #authScreen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--header);}
+  #authScreen .card{width:100%; max-width:360px; box-shadow:0 10px 40px rgba(0,0,0,0.35);}
+  #authScreen .logo{width:52px; height:52px; border-radius:12px; background:var(--red); display:flex; align-items:center; justify-content:center; margin:0 auto 14px auto;}
+  #authScreen .logo svg{width:28px; height:28px; stroke:#fff; fill:none;}
+  #authScreen h1{text-align:center; font-size:1.1rem; text-transform:uppercase; letter-spacing:0.06em;}
+  #authScreen .sub{text-align:center; color:var(--grey); font-size:0.83rem; margin-bottom:6px;}
   #authError{color:var(--red-dark); font-size:0.82rem; margin-top:10px; display:none;}
 
+  /* Desktop: keep the single field-app column, just frame it cleanly */
+  @media (min-width:900px){
+    main{max-width:680px; padding:24px 16px 40px;}
+    header.top{padding-left:max(16px,calc((100vw - 680px)/2)); padding-right:max(16px,calc((100vw - 680px)/2));}
+    nav.bottom{justify-content:center; gap:6px;}
+    nav.bottom button{flex:0 0 116px;}
+  }
+
   /* Certificate + printable register */
-  .cert h1{font-size:1.15rem; margin-bottom:2px;}
+  .cert h1{font-size:1.15rem; margin-bottom:2px; text-transform:none; letter-spacing:0;}
   .cert .logo{display:block; max-height:70px; max-width:220px; margin-bottom:10px; object-fit:contain;}
   .cert .co{font-size:0.85rem; color:var(--grey); line-height:1.4;}
   .logo-box{display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--paper); margin-top:6px;}
@@ -175,7 +214,7 @@
 <!-- LOGIN SCREEN -->
 <div id="authScreen">
   <div class="card">
-    <div class="logo">🔥</div>
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div>
     <h1>Vigil Fire</h1>
     <div class="sub">SANS 1475 fire equipment register</div>
     <label>Technician number or email</label>
@@ -192,7 +231,7 @@
 <div id="appShell" style="display:none;">
   <header class="top">
     <div class="brand">
-      <div class="mark">🔥</div>
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></div>
       <div class="titles">
         <div class="t1" id="headerTitle">Vigil Fire</div>
         <div class="t2" id="headerSub">SANS 1475 field inspections</div>
@@ -215,7 +254,7 @@
 
     <!-- ===== SITE FORM (admin only: create/edit site + assign technicians) ===== -->
     <section id="view-site-form" class="view">
-      <div class="backbar"><button onclick="showView('view-sites')">←</button><h2 id="siteFormTitle">New site</h2></div>
+      <div class="backbar"><button onclick="showView('view-sites')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="siteFormTitle">New site</h2></div>
       <div class="card">
         <label>Site name</label>
         <input id="siteNameInput" placeholder="e.g. Riverstone Warehouse">
@@ -242,18 +281,18 @@
     <!-- ===== SITE DETAIL (shared) ===== -->
     <section id="view-site-detail" class="view">
       <div class="backbar">
-        <button onclick="showView('view-sites')">←</button>
+        <button onclick="showView('view-sites')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
         <div><h2 id="siteDetailName">Site</h2><div class="hint" id="siteDetailAddress"></div></div>
       </div>
 
       <div class="card" id="siteCompletionCard" style="padding:14px 16px;"></div>
 
-      <button class="btn secondary" style="margin-bottom:14px;" onclick="openRegister(currentSiteId)">🖨 Printable register</button>
+      <button class="btn secondary" style="margin-bottom:14px;" onclick="openRegister(currentSiteId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Printable register</button>
 
       <div class="card" id="serviceRunCard" style="display:none; padding:12px 16px;">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
           <div><strong>Service run</strong><div class="hint" id="serviceRunSummary" style="margin:2px 0 0 0;"></div></div>
-          <button class="btn secondary" style="flex-shrink:0; width:auto; white-space:nowrap;" onclick="startServiceRun()">▶ Start</button>
+          <button class="btn secondary" style="flex-shrink:0; width:auto; white-space:nowrap;" onclick="startServiceRun()"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg>Start</button>
         </div>
       </div>
 
@@ -270,7 +309,7 @@
 
     <!-- ===== EQUIPMENT (ASSET) DETAIL — identity + inspection history ===== -->
     <section id="view-equipment-detail" class="view">
-      <div class="backbar"><button onclick="showView('view-site-detail')">←</button><h2 id="assetDetailTitle">Equipment</h2></div>
+      <div class="backbar"><button onclick="showView('view-site-detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="assetDetailTitle">Equipment</h2></div>
       <div class="card">
         <div id="assetIdentity"></div>
         <div class="row" style="margin-top:14px;">
@@ -285,7 +324,7 @@
 
     <!-- ===== ASSET FORM — physical equipment identity only ===== -->
     <section id="view-equipment-form" class="view">
-      <div class="backbar"><button onclick="cancelAssetForm()">←</button><h2 id="assetFormTitle">New equipment</h2></div>
+      <div class="backbar"><button onclick="cancelAssetForm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="assetFormTitle">New equipment</h2></div>
       <div class="card">
         <label>Equipment type</label>
         <select id="eqType">
@@ -312,7 +351,7 @@
 
     <!-- ===== INSPECTION FORM — one dated inspection event ===== -->
     <section id="view-inspection-form" class="view">
-      <div class="backbar"><button onclick="exitInspectionForm()">←</button><h2 id="inspFormTitle">Log inspection</h2></div>
+      <div class="backbar"><button onclick="exitInspectionForm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="inspFormTitle">Log inspection</h2></div>
       <div id="serviceRunBanner" style="display:none; align-items:center; justify-content:space-between; gap:10px; background:var(--amber-bg); color:var(--amber); padding:8px 10px 8px 12px; border-radius:8px; margin-bottom:12px; font-weight:700; font-size:0.8rem;">
         <span id="serviceRunProgress">Service run</span>
         <span style="display:flex; gap:6px;">
@@ -378,7 +417,7 @@
     </section>
 
     <section id="view-tech-form" class="view">
-      <div class="backbar"><button onclick="showView('view-technicians')">←</button><h2 id="techFormTitle">New technician</h2></div>
+      <div class="backbar"><button onclick="showView('view-technicians')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="techFormTitle">New technician</h2></div>
       <div class="card">
         <label>Full name</label><input id="techName" placeholder="e.g. Thabo Nkosi">
         <label>Technician number</label><input id="techNumber" type="text" placeholder="e.g. 12345">
@@ -432,7 +471,7 @@
 
     <!-- ===== CERTIFICATE (rendered into a printable page) ===== -->
     <section id="view-certificate" class="view">
-      <div class="backbar"><button onclick="showView('view-site-detail')">←</button><h2>Certificate</h2></div>
+      <div class="backbar"><button onclick="showView('view-site-detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2>Certificate</h2></div>
       <div class="card"><div id="certContent"></div></div>
       <div class="row" style="margin-top:6px;">
         <button class="btn secondary" onclick="showView('view-site-detail')">Back</button>
@@ -442,7 +481,7 @@
 
     <!-- ===== PRINTABLE SITE REGISTER (rendered into a printable page) ===== -->
     <section id="view-register" class="view">
-      <div class="backbar"><button onclick="showView('view-site-detail')">←</button><h2>Register</h2></div>
+      <div class="backbar"><button onclick="showView('view-site-detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2>Register</h2></div>
       <div class="card"><div id="registerContent"></div></div>
       <div class="row" style="margin-top:6px;">
         <button class="btn secondary" onclick="showView('view-site-detail')">Back</button>
@@ -455,15 +494,27 @@
   <div id="toast"></div>
 
   <nav class="bottom" id="bottomNav">
-    <button id="navSites" class="active" onclick="showView('view-sites')"><span class="ic">🏢</span><span id="navSitesLabel">Sites</span></button>
-    <button id="navDue" onclick="showView('view-due')"><span class="ic">⏰</span><span>Due</span></button>
-    <button id="navTechnicians" style="display:none;" onclick="showView('view-technicians')"><span class="ic">👤</span><span>Techs</span></button>
-    <button id="navCompany" style="display:none;" onclick="showView('view-company')"><span class="ic">🏷️</span><span>Company</span></button>
-    <button id="navExport" style="display:none;" onclick="showView('view-export')"><span class="ic">⬇</span><span>Export</span></button>
+    <button id="navSites" class="active" onclick="showView('view-sites')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg></span><span id="navSitesLabel">Sites</span></button>
+    <button id="navDue" onclick="showView('view-due')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg></span><span>Due</span></button>
+    <button id="navTechnicians" style="display:none;" onclick="showView('view-technicians')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Techs</span></button>
+    <button id="navCompany" style="display:none;" onclick="showView('view-company')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span><span>Company</span></button>
+    <button id="navExport" style="display:none;" onclick="showView('view-export')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></span><span>Export</span></button>
   </nav>
 </div>
 
 <script>
+/* ---------- Inline icon set — keeps the UI emoji-free ---------- */
+const _svg = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ICON = {
+  building:    _svg('<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>'),
+  clock:       _svg('<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/>'),
+  user:        _svg('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+  extinguisher:_svg('<path d="M15 6.5V3a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v3.5"/><path d="M18 3h-3"/><path d="M11 3a6 6 0 0 0-6 6v11"/><path d="M5 13h4"/><path d="M9 18h8"/><path d="M17 10a4 4 0 0 0-8 0v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2Z"/>'),
+  check:       _svg('<polyline points="20 6 9 17 4 12"/>'),
+  pencil:      _svg('<path d="M17 3a2.83 2.83 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>'),
+  printer:     _svg('<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/>')
+};
+
 /* =========================================================
    Firebase config for the vigil-fire project
    ========================================================= */
@@ -635,11 +686,11 @@ function renderSites(){
 function paintSites(){
   const wrap = document.getElementById('sitesList');
   if(sitesCache.length===0){
-    wrap.innerHTML = `<div class="empty"><div class="big">🏢</div>${currentRole==='admin' ? 'No sites yet. Add your first site.' : 'No sites assigned to you yet. Check with your administrator.'}</div>`;
+    wrap.innerHTML = `<div class="empty"><div class="big">${ICON.building}</div>${currentRole==='admin' ? 'No sites yet. Add your first site.' : 'No sites assigned to you yet. Check with your administrator.'}</div>`;
     return;
   }
   wrap.innerHTML = sitesCache.map(s=>{
-    const editBtn = currentRole==='admin' ? `<span class="edit-ic" onclick="event.stopPropagation(); openSiteForm('${s.id}')">✏️</span>` : '';
+    const editBtn = currentRole==='admin' ? `<span class="edit-ic" onclick="event.stopPropagation(); openSiteForm('${s.id}')" aria-label="Edit site">${ICON.pencil}</span>` : '';
     const cat = siteCategoryLabel(s.category);
     const badges = [
       cat ? `<span class="pill">${cat}</span>` : '',
@@ -764,7 +815,7 @@ function renderSiteDetailChrome(){
         <div><strong style="color:var(--green);">✓ Site complete</strong><div class="hint" style="margin:2px 0 0 0;">${signoff}</div></div>
         <button class="btn secondary" style="flex-shrink:0; width:auto; white-space:nowrap;" onclick="reopenSite()">Reopen</button>
       </div>
-      ${currentRole==='admin' ? `<button class="btn secondary" style="margin-top:10px;" onclick="openCertificate(currentSiteId)">🖨 Generate certificate</button>` : ''}`;
+      ${currentRole==='admin' ? `<button class="btn secondary" style="margin-top:10px;" onclick="openCertificate(currentSiteId)">${ICON.printer} Generate certificate</button>` : ''}`;
   } else {
     card.style.background = '#fff';
     card.style.borderColor = 'var(--line)';
@@ -1029,7 +1080,7 @@ function paintEquipment(){
   updateServiceRunCard();
   if(equipmentCache.length===0){
     bar.style.display = 'none';
-    wrap.innerHTML = `<div class="empty"><div class="big">🧯</div>No equipment logged at this site yet.</div>`;
+    wrap.innerHTML = `<div class="empty"><div class="big">${ICON.extinguisher}</div>No equipment logged at this site yet.</div>`;
     return;
   }
 
@@ -1161,7 +1212,7 @@ async function renderDueDashboard(){
   const wrap = document.getElementById('dueList');
   const siteIds = sitesCache.map(s=>s.id);
   if(siteIds.length===0){
-    wrap.innerHTML = `<div class="empty"><div class="big">⏰</div>No sites yet.</div>`;
+    wrap.innerHTML = `<div class="empty"><div class="big">${ICON.clock}</div>No sites yet.</div>`;
     return;
   }
   wrap.innerHTML = `<div class="empty">Loading…</div>`;
@@ -1198,7 +1249,7 @@ async function renderDueDashboard(){
   });
 
   if(flagged.length===0){
-    wrap.innerHTML = `<div class="empty"><div class="big">✓</div>Nothing due in the next 30 days.</div>`;
+    wrap.innerHTML = `<div class="empty"><div class="big">${ICON.check}</div>Nothing due in the next 30 days.</div>`;
     return;
   }
 
@@ -1697,7 +1748,7 @@ function renderTechnicians(){
 function paintTechnicians(){
   const wrap = document.getElementById('techList');
   if(techsCache.length===0){
-    wrap.innerHTML = `<div class="empty"><div class="big">👤</div>No technicians yet.</div>`;
+    wrap.innerHTML = `<div class="empty"><div class="big">${ICON.user}</div>No technicians yet.</div>`;
     return;
   }
   const ordered = techsCache.slice().sort((a,b)=>(a.active===false)-(b.active===false));
