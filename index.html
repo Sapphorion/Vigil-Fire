@@ -201,6 +201,20 @@
   .cert h3{font-size:0.95rem; margin:18px 0 6px; text-transform:uppercase; letter-spacing:0.03em;}
   .cert .regpage + .regpage{margin-top:36px; padding-top:24px; border-top:2px dashed var(--line);}
   .cert .tablewrap{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  .cert .rep-item{border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-top:12px;}
+  .cert .rep-item h3{margin:0 0 8px; font-size:0.95rem; text-transform:none; letter-spacing:0;}
+  .cert .rep-check{margin-top:10px; font-size:0.82rem;}
+  .cert .rep-check ul{margin:6px 0 0; padding-left:20px;}
+  .cert .rep-check li{margin:3px 0;}
+
+  /* "What was done" checkbox lists (pressure test / recharge) */
+  .chk{display:flex; gap:10px; align-items:flex-start; margin:0; padding:9px 0; border-bottom:1px solid var(--line);
+    font-size:0.88rem; font-weight:400; letter-spacing:0; text-transform:none; cursor:pointer;}
+  .chk:last-child{border-bottom:none;}
+  .chk input{width:auto; margin:2px 0 0; flex-shrink:0;}
+  .chk span{color:var(--grey); line-height:1.4;}
+  .chk.on span{color:var(--ink);}
+
   @media print {
     header.top, nav.bottom, #toast, .backbar, .btn, #syncPill { display:none !important; }
     body { padding-bottom:0; background:#fff; }
@@ -210,6 +224,7 @@
     .cert table { font-size:0.72rem; }
     .cert th, .cert td { padding:4px 6px; }
     .cert .regpage + .regpage{ break-before:page; margin-top:0; padding-top:0; border-top:none; }
+    .cert .rep-item{ break-inside:avoid; }
   }
 </style>
 </head>
@@ -332,14 +347,41 @@
           <div><label>Inspection month</label><input id="eqInspDate" type="month"></div>
         </div>
         <div><label>Next service due</label><input id="eqNextDue" type="month"></div>
+        <div class="hint">Dates are recorded as month and year. Next service auto-fills to 1 year after the service month (annual servicing per SANS 1475).</div>
+
+        <div class="divider"></div>
+        <label style="margin-top:0;">Pressure test</label>
         <div class="row">
           <div><label>Last pressure test</label><input id="eqPressureTestDate" type="month" onchange="onPressureTestDateChange()"></div>
           <div><label>Pressure test due <span id="ptHint" style="text-transform:none;font-weight:500;"></span></label><input id="eqPressureTestDue" type="month"></div>
         </div>
-        <div class="hint">Dates are recorded as month and year. Next service auto-fills to 1 year after the service month (annual servicing per SANS 1475). Enter the month of the last pressure (hydrostatic) test — "pressure test due" then auto-fills to 5 years later for powder, foam and water extinguishers, or 10 years for CO₂. Hydrants, hose reels, sirens and blankets get no auto-filled date. The pressure test month carries over between services, so you only change it in the year a test is actually done.</div>
+        <div class="hint">"Pressure test due" auto-fills to 5 years after the last test for powder, foam and water extinguishers, or 10 years for CO₂. Hydrants, hose reels, sirens and blankets get no auto-filled date. The last-test month carries over between services — change it only in the year a test is actually done.</div>
+        <label>Pressure (hydrostatic) test performed this service?</label>
+        <select id="eqPtPerformed" onchange="onPtPerformedChange()">
+          <option value="no">No</option>
+          <option value="yes">Yes — record the test below</option>
+        </select>
+        <div id="ptDetailWrap" style="display:none;">
+          <label>Previous pressure test month</label>
+          <input id="eqPtPrevDate" type="month">
+          <div class="hint">Set "Last pressure test" above to this service's test month — that becomes the new date on record; this field keeps the one it replaced.</div>
+          <div class="row">
+            <div><label>Test pressure (kPa)</label><input id="eqPtPressure" inputmode="numeric" placeholder="e.g. 2500"></div>
+            <div><label>Result</label><select id="eqPtResult"><option value="pass">Passed</option><option value="fail">Failed / condemned</option></select></div>
+          </div>
+          <div class="row">
+            <div><label>Pressure test done by</label><input id="eqPtTech" placeholder="Technician name"></div>
+            <div><label>SAQCC no.</label><input id="eqPtSaqcc" placeholder="e.g. SAQCC/F/12345"></div>
+          </div>
+          <label>Checklist — SANS 1475 Annex G</label>
+          <div id="ptChecklistWrap"></div>
+          <label>Pressure test notes</label>
+          <textarea id="eqPtNotes" placeholder="Observations — distortion, bulging, leakage, etc."></textarea>
+        </div>
 
         <div class="divider"></div>
-        <label style="margin-top:0;">Recharge required?</label>
+        <label style="margin-top:0;">Recharge</label>
+        <label style="margin-top:8px;">Recharge required?</label>
         <select id="eqRechargeReq" onchange="onRechargeReqChange()">
           <option value="no">No — equipment charged and in order</option>
           <option value="yes">Yes — recharge needed</option>
@@ -347,8 +389,22 @@
         <div id="rechargeDateWrap" style="display:none;">
           <label>Month recharged</label>
           <input id="eqRechargeDate" type="month">
+          <div class="hint">Leave blank until the recharge is done. A "recharge needed" item stays on the Due list until this is filled in, and per SACAS the printable register can't be generated while any recharge on the site is outstanding.</div>
+          <div class="row">
+            <div><label>Pressure before recharge (kPa)</label><input id="eqRcPressBefore" inputmode="numeric" placeholder="e.g. 0"></div>
+            <div><label>Working pressure after (kPa)</label><input id="eqRcPressAfter" inputmode="numeric" placeholder="e.g. 1500"></div>
+          </div>
+          <label>Extinguishing medium &amp; charge</label>
+          <input id="eqRcMedium" placeholder="e.g. 9 kg SANS 1910 DCP">
+          <div class="row">
+            <div><label>Recharge done by</label><input id="eqRcTech" placeholder="Technician name"></div>
+            <div><label>SAQCC no.</label><input id="eqRcSaqcc" placeholder="e.g. SAQCC/F/12345"></div>
+          </div>
+          <label>Checklist — SANS 1475 recharge</label>
+          <div id="rcChecklistWrap"></div>
+          <label>Recharge notes</label>
+          <textarea id="eqRcNotes" placeholder="Any additional observations"></textarea>
         </div>
-        <div class="hint">A "recharge needed" item stays on the Due list until its recharge date is filled in — the technician can add that date from Due once the unit is back. Per SACAS, the printable register can't be generated while any recharge on the site is still outstanding.</div>
 
         <div class="divider"></div>
         <label style="margin-top:0;">Inspection checklist</label>
@@ -434,14 +490,75 @@
       </div>
     </section>
 
-    <!-- ===== EXPORT (shared) ===== -->
+    <!-- ===== EXPORT & REPORTS (admin) ===== -->
     <section id="view-export" class="view">
-      <h2>Export records</h2>
-      <p class="hint" style="font-size:0.85rem; margin-bottom:16px;">Export regularly to keep a filed backup of your compliance records. The file is headed with your company details from the Company profile tab.</p>
+      <h2>Export &amp; reports</h2>
+      <p class="hint" style="font-size:0.85rem; margin-bottom:16px;">Export regularly to keep a filed backup. Reports are letterheaded with your Company profile details.</p>
       <div class="card">
-        <label style="margin-top:0;">Export scope</label>
+        <label style="margin-top:0;">Site</label>
         <select id="exportSiteFilter"></select>
-        <button class="btn" style="margin-top:16px;" onclick="exportCSV()">Export as CSV (Excel-compatible)</button>
+        <button class="btn" style="margin-top:14px;" onclick="exportCSV()">Export all records as CSV</button>
+
+        <div class="divider"></div>
+        <label style="margin-top:0;">Per-site reports</label>
+        <button class="btn secondary" style="margin-top:6px;" onclick="openPressureTestReport()">Pressure test report</button>
+        <button class="btn secondary" style="margin-top:8px;" onclick="openRechargeReport()">Recharge report</button>
+        <div class="hint">Choose a single site above. Each report covers the equipment whose latest record shows a pressure test / recharge was performed.</div>
+
+        <div class="divider"></div>
+        <label style="margin-top:0;">Company registers</label>
+        <button class="btn secondary" style="margin-top:6px;" onclick="showView('view-calibration')">Calibration register — scales &amp; gauges</button>
+      </div>
+    </section>
+
+    <!-- ===== CALIBRATION REGISTER (weekly checks of test equipment) ===== -->
+    <section id="view-calibration" class="view">
+      <div class="backbar"><button onclick="showView('view-export')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2>Calibration register</h2></div>
+      <p class="hint" style="margin:0 0 12px;">SANS 1475 Annex A: the workshop's production-control equipment (weighing scales, working and master pressure gauges) must be checked against reference instruments at least weekly, and recorded in writing. Log each weekly check here.</p>
+      <div class="card">
+        <label style="margin-top:0;">Record a check</label>
+        <div class="row">
+          <div><label>Date</label><input id="calDate" type="date"></div>
+          <div><label>Equipment type</label><select id="calType">
+            <option value="scale">Weighing scale</option>
+            <option value="gauge">Working pressure gauge</option>
+            <option value="master">Master pressure gauge</option>
+            <option value="other">Other test equipment</option>
+          </select></div>
+        </div>
+        <label>Equipment / asset reference</label>
+        <input id="calEquip" placeholder="e.g. Bench scale #1">
+        <label>Reference instrument used</label>
+        <input id="calRef" placeholder="e.g. 5 kg calibrated test weight / master gauge A">
+        <div class="row">
+          <div><label>Reading / value found</label><input id="calReading" placeholder="e.g. 5.000 kg"></div>
+          <div><label>Deviation</label><input id="calDeviation" placeholder="e.g. 0 g / +10 kPa"></div>
+        </div>
+        <label>Result</label>
+        <select id="calResult">
+          <option value="pass">Within tolerance — pass</option>
+          <option value="fail">Out of tolerance — fail</option>
+        </select>
+        <label>Action taken (if any)</label>
+        <input id="calAction" placeholder="e.g. adjusted / tagged out / sent for recalibration">
+        <label>Checked by</label>
+        <input id="calTech" placeholder="Technician name">
+        <button class="btn" style="margin-top:16px;" onclick="saveCalibrationEntry()">Add to register</button>
+      </div>
+      <div class="section-title">
+        <h2>Recent checks</h2>
+        <button class="btn secondary" style="width:auto; padding:8px 14px;" onclick="openCalibrationReport()">Print register</button>
+      </div>
+      <div id="calList"><div class="empty">Loading…</div></div>
+    </section>
+
+    <!-- ===== GENERIC PRINTABLE REPORT ===== -->
+    <section id="view-report" class="view">
+      <div class="backbar"><button onclick="showView(reportBackView)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="reportTitle">Report</h2></div>
+      <div class="card"><div id="reportContent"></div></div>
+      <div class="row" style="margin-top:6px;">
+        <button class="btn secondary" onclick="showView(reportBackView)">Back</button>
+        <button class="btn" onclick="window.print()">Print / Save as PDF</button>
       </div>
     </section>
 
@@ -619,21 +736,23 @@ function showView(id){
   document.getElementById('navDue').classList.toggle('active', id==='view-due');
   document.getElementById('navTechnicians').classList.toggle('active', ['view-technicians','view-tech-form'].includes(id));
   document.getElementById('navCompany').classList.toggle('active', id==='view-company');
-  document.getElementById('navExport').classList.toggle('active', id==='view-export');
+  document.getElementById('navExport').classList.toggle('active', ['view-export','view-calibration','view-report'].includes(id));
   if(id==='view-sites') renderSites();
   if(id==='view-due') renderDueDashboard();
   if(id==='view-technicians') renderTechnicians();
   if(id==='view-company') loadCompanySettings();
   if(id==='view-export'){ refreshExport(); loadCompanySettings(); }
+  if(id==='view-calibration') renderCalibrationView();
 }
 
 /* ---------- Firestore listener bookkeeping ---------- */
-let unsubSites = null, unsubEquipment = null, unsubInspections = null, unsubTechs = null;
+let unsubSites = null, unsubEquipment = null, unsubInspections = null, unsubTechs = null, unsubCal = null;
 function detachAllListeners(){
   if(unsubSites){ unsubSites(); unsubSites=null; }
   if(unsubEquipment){ unsubEquipment(); unsubEquipment=null; }
   if(unsubInspections){ unsubInspections(); unsubInspections=null; }
   if(unsubTechs){ unsubTechs(); unsubTechs=null; }
+  if(unsubCal){ unsubCal(); unsubCal=null; }
 }
 
 /* ---------- Sites ---------- */
@@ -1333,6 +1452,44 @@ function setCheck(key, val){
   currentChecklistValues[key] = currentChecklistValues[key]===val ? null : val;
   renderChecklist(currentInspectionType);
 }
+
+/* ---------- Pressure-test (Annex G) and recharge "what was done" checklists ---------- */
+const PT_CHECKLIST = [
+  ['discharged','Extinguisher fully discharged and depressurised before disassembly'],
+  ['stripped','Valve, internal parts and hose assembly removed; cylinder emptied'],
+  ['water','Cylinder filled with water and all entrapped air bled off'],
+  ['held','Test pressure applied at an even rate and held for at least 60 seconds'],
+  ['nodistortion','No permanent distortion, bulging or leakage observed at test pressure'],
+  ['dried','Cylinder dried internally and externally after the test'],
+  ['reassembled','O-rings, seals and serviceable parts renewed; extinguisher correctly reassembled'],
+  ['recharged','Extinguisher recharged and leak-tested after pressurisation'],
+  ['label','New pressure-test label fitted — organisation, technician reg. no., date, test pressure (kPa)']
+];
+const RC_CHECKLIST = [
+  ['medium','Correct extinguishing medium and charge mass used, as specified by the manufacturer'],
+  ['inspected','Cylinder interior, siphon tube and valve inspected — free of corrosion and damage'],
+  ['seals','O-rings, gaskets and seals renewed'],
+  ['pressure','Recharged to the correct working pressure for the extinguisher type'],
+  ['gauge','Extinguisher pressure indicator verified against the master / working pressure gauge'],
+  ['leak','Leak test performed after pressurisation — no leakage detected'],
+  ['seal','New safety pin, tamper seal and completed service label fitted']
+];
+function renderCheckboxList(wrapId, def, values){
+  document.getElementById(wrapId).innerHTML = def.map(([k,label])=>`
+    <label class="chk${values[k]?' on':''}"><input type="checkbox" data-k="${k}" ${values[k]?'checked':''} onchange="this.closest('.chk').classList.toggle('on', this.checked)"><span>${escapeHtml(label)}</span></label>`).join('');
+}
+function collectCheckboxList(wrapId){
+  const o = {};
+  document.querySelectorAll('#'+wrapId+' input[type=checkbox]').forEach(i=>{ if(i.checked) o[i.dataset.k] = true; });
+  return o;
+}
+function onPtPerformedChange(){
+  const yes = document.getElementById('eqPtPerformed').value === 'yes';
+  document.getElementById('ptDetailWrap').style.display = yes ? 'block' : 'none';
+  if(yes && !document.getElementById('eqPtPrevDate').value){
+    document.getElementById('eqPtPrevDate').value = document.getElementById('eqPressureTestDate').value || '';
+  }
+}
 function toLocalISO(dt){
   return new Date(dt.getTime() - dt.getTimezoneOffset()*60000).toISOString().slice(0,10);
 }
@@ -1426,10 +1583,28 @@ async function openEquipmentForm(id){
     p.src = e.photoURL; p.style.display = 'block';
   }
 
+  // Pressure test detail
+  document.getElementById('eqPtPerformed').value = (e && e.ptPerformed) ? 'yes' : 'no';
+  document.getElementById('eqPtPrevDate').value  = e ? ym(e.ptPrevDate) : '';
+  document.getElementById('eqPtPressure').value  = e ? (e.ptTestPressure||'') : '';
+  document.getElementById('eqPtResult').value    = e ? (e.ptResult||'pass') : 'pass';
+  document.getElementById('eqPtTech').value      = (e && e.ptPerformed) ? (e.ptTechnicianName||'') : (currentProfile.name||'');
+  document.getElementById('eqPtSaqcc').value     = (e && e.ptPerformed) ? (e.ptTechnicianSaqcc||'') : (currentProfile.saqcc||'');
+  document.getElementById('eqPtNotes').value     = e ? (e.ptNotes||'') : '';
+  renderCheckboxList('ptChecklistWrap', PT_CHECKLIST, (e && e.ptChecklist) || {});
+  onPtPerformedChange();
+
   // Recharge
   const rechargeYes = !!(e && e.rechargeRequired);
-  document.getElementById('eqRechargeReq').value = rechargeYes ? 'yes' : 'no';
+  document.getElementById('eqRechargeReq').value  = rechargeYes ? 'yes' : 'no';
   document.getElementById('eqRechargeDate').value = e ? ym(e.rechargeDate) : '';
+  document.getElementById('eqRcPressBefore').value = e ? (e.rechargePressureBefore||'') : '';
+  document.getElementById('eqRcPressAfter').value  = e ? (e.rechargePressureAfter||'') : '';
+  document.getElementById('eqRcMedium').value      = e ? (e.rechargeMedium||'') : '';
+  document.getElementById('eqRcTech').value        = (e && e.rechargeTechnicianName) || (currentProfile.name||'');
+  document.getElementById('eqRcSaqcc').value       = (e && e.rechargeTechnicianName) ? (e.rechargeTechnicianSaqcc||'') : (currentProfile.saqcc||'');
+  document.getElementById('eqRcNotes').value       = e ? (e.rechargeNotes||'') : '';
+  renderCheckboxList('rcChecklistWrap', RC_CHECKLIST, (e && e.rechargeChecklist) || {});
   onRechargeReqChange();
 
   // Technician — show whoever last serviced it, otherwise the current user
@@ -1462,7 +1637,9 @@ async function saveEquipment(){
   }
 
   const rechargeRequired = document.getElementById('eqRechargeReq').value === 'yes';
+  const ptPerformed = document.getElementById('eqPtPerformed').value === 'yes';
   const inspectionDate = document.getElementById('eqInspDate').value || null;
+  const val = id => document.getElementById(id).value.trim();
   const payload = {
     type,
     size: document.getElementById('eqSize').value.trim(),
@@ -1481,6 +1658,23 @@ async function saveEquipment(){
     photoURL: photoURL || null,
     rechargeRequired,
     rechargeDate: rechargeRequired ? (document.getElementById('eqRechargeDate').value || null) : null,
+    // Pressure test (hydrostatic) — captured when performed this service
+    ptPerformed,
+    ptPrevDate: ptPerformed ? (document.getElementById('eqPtPrevDate').value || null) : (e ? (e.ptPrevDate||null) : null),
+    ptTestPressure: ptPerformed ? val('eqPtPressure') : '',
+    ptResult: ptPerformed ? document.getElementById('eqPtResult').value : '',
+    ptTechnicianName: ptPerformed ? val('eqPtTech') : '',
+    ptTechnicianSaqcc: ptPerformed ? val('eqPtSaqcc') : '',
+    ptChecklist: ptPerformed ? collectCheckboxList('ptChecklistWrap') : {},
+    ptNotes: ptPerformed ? val('eqPtNotes') : '',
+    // Recharge detail — captured when a recharge is on the record
+    rechargeMedium: rechargeRequired ? val('eqRcMedium') : '',
+    rechargePressureBefore: rechargeRequired ? val('eqRcPressBefore') : '',
+    rechargePressureAfter: rechargeRequired ? val('eqRcPressAfter') : '',
+    rechargeTechnicianName: rechargeRequired ? val('eqRcTech') : '',
+    rechargeTechnicianSaqcc: rechargeRequired ? val('eqRcSaqcc') : '',
+    rechargeChecklist: rechargeRequired ? collectCheckboxList('rcChecklistWrap') : {},
+    rechargeNotes: rechargeRequired ? val('eqRcNotes') : '',
     schemaVersion: 2,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
@@ -1744,6 +1938,212 @@ function csvEscape(v){
   if(/^[=+\-@\t\r]/.test(v)) v = "'" + v;          // neutralise spreadsheet formula injection
   if(/[",\n\r]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
   return v;
+}
+
+/* ========================================================================
+   Reports (printable) — pressure test, recharge, calibration register
+   ======================================================================== */
+let reportBackView = 'view-export';
+function letterheadHTML(co){
+  return `${co.logo ? `<img class="logo" src="${co.logo}" alt="">` : ''}
+    <h1>${escapeHtml(co.name || 'Fire equipment servicing')}</h1>
+    <div class="co">
+      ${co.reg ? 'Reg: '+escapeHtml(co.reg)+'<br>' : ''}
+      ${co.address ? escapeHtml(co.address)+'<br>' : ''}
+      ${[co.phone, co.email].filter(Boolean).map(escapeHtml).join(' · ')}
+    </div>`;
+}
+function showReport(title, innerHTML, backView){
+  reportBackView = backView || 'view-export';
+  document.getElementById('reportTitle').textContent = title;
+  document.getElementById('reportContent').innerHTML = `<div class="cert">${innerHTML}</div>`;
+  showView('view-report');
+}
+function reportSiteId(){
+  const v = document.getElementById('exportSiteFilter').value;
+  return (v && v !== 'all') ? v : null;
+}
+function checklistUL(def, values){
+  return `<ul>${def.map(([k,l])=>`<li>${(values && values[k]) ? '☑' : '☐'} ${escapeHtml(l)}</li>`).join('')}</ul>`;
+}
+
+async function openPressureTestReport(){
+  const siteId = reportSiteId();
+  if(!siteId){ toast('Choose a single site for this report'); return; }
+  const site = sitesCache.find(s=>s.id===siteId);
+  if(!site){ toast('Site not found'); return; }
+  toast('Building report…');
+  await loadCompanySettings();
+  let items = [];
+  try{
+    const snap = await db.collection('equipment').where('siteId','==', siteId).get();
+    items = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(e=>e.ptPerformed);
+  }catch(e){ toast('Could not load equipment: ' + e.message); return; }
+  items.sort((a,b)=>(a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
+  const co = companySettings || {};
+  const today = toLocalISO(new Date());
+  const head = `${letterheadHTML(co)}
+    <h2 style="margin-top:16px; font-size:1rem;">Pressure Test Report — Portable Fire Equipment (SANS 1475)</h2>
+    <div class="meta">
+      <strong>Site:</strong> ${escapeHtml(site.name)}<br>
+      ${site.address ? '<strong>Address:</strong> '+escapeHtml(site.address)+'<br>' : ''}
+      <strong>Generated:</strong> ${today}<br>
+      <strong>Units pressure tested:</strong> ${items.length}
+    </div>`;
+  if(items.length===0){
+    showReport('Pressure test report', head + `<p style="margin-top:12px;">No pressure tests are recorded for equipment at this site.</p>`);
+    return;
+  }
+  const blocks = items.map(e=>`<div class="rep-item">
+    <h3>${escapeHtml(typeLabel(e.type))}${e.size?(' · '+escapeHtml(e.size)):''}${e.make?(' · '+escapeHtml(e.make)):''}</h3>
+    <div class="kv"><span class="k">Serial / tag</span><span class="v">${escapeHtml(e.serial||'—')}</span></div>
+    <div class="kv"><span class="k">Location</span><span class="v">${escapeHtml(e.location||'—')}</span></div>
+    <div class="kv"><span class="k">Previous pressure test</span><span class="v">${escapeHtml(ym(e.ptPrevDate)||'—')}</span></div>
+    <div class="kv"><span class="k">New pressure test</span><span class="v">${escapeHtml(ym(e.pressureTestDate)||'—')}</span></div>
+    <div class="kv"><span class="k">Next test due</span><span class="v">${escapeHtml(ym(e.pressureTestDue)||'—')}</span></div>
+    <div class="kv"><span class="k">Test pressure</span><span class="v">${escapeHtml(e.ptTestPressure||'—')}${e.ptTestPressure?' kPa':''}</span></div>
+    <div class="kv"><span class="k">Result</span><span class="v">${e.ptResult==='fail'?'Failed / condemned':'Passed'}</span></div>
+    <div class="kv"><span class="k">Tested by</span><span class="v">${escapeHtml(e.ptTechnicianName||'—')}${e.ptTechnicianSaqcc?(' — '+escapeHtml(e.ptTechnicianSaqcc)):''}</span></div>
+    ${e.ptNotes?`<div class="kv"><span class="k">Notes</span><span class="v">${escapeHtml(e.ptNotes)}</span></div>`:''}
+    <div class="rep-check"><strong>Procedure — SANS 1475 Annex G</strong>${checklistUL(PT_CHECKLIST, e.ptChecklist)}</div>
+  </div>`).join('');
+  showReport('Pressure test report', head + blocks);
+}
+
+async function openRechargeReport(){
+  const siteId = reportSiteId();
+  if(!siteId){ toast('Choose a single site for this report'); return; }
+  const site = sitesCache.find(s=>s.id===siteId);
+  if(!site){ toast('Site not found'); return; }
+  toast('Building report…');
+  await loadCompanySettings();
+  let items = [];
+  try{
+    const snap = await db.collection('equipment').where('siteId','==', siteId).get();
+    items = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(e=>e.rechargeRequired && e.rechargeDate);
+  }catch(e){ toast('Could not load equipment: ' + e.message); return; }
+  items.sort((a,b)=>(a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
+  const co = companySettings || {};
+  const today = toLocalISO(new Date());
+  const head = `${letterheadHTML(co)}
+    <h2 style="margin-top:16px; font-size:1rem;">Recharge Report — Portable Fire Equipment (SANS 1475)</h2>
+    <div class="meta">
+      <strong>Site:</strong> ${escapeHtml(site.name)}<br>
+      ${site.address ? '<strong>Address:</strong> '+escapeHtml(site.address)+'<br>' : ''}
+      <strong>Generated:</strong> ${today}<br>
+      <strong>Units recharged:</strong> ${items.length}
+    </div>`;
+  if(items.length===0){
+    showReport('Recharge report', head + `<p style="margin-top:12px;">No completed recharges are recorded for equipment at this site.</p>`);
+    return;
+  }
+  const blocks = items.map(e=>`<div class="rep-item">
+    <h3>${escapeHtml(typeLabel(e.type))}${e.size?(' · '+escapeHtml(e.size)):''}${e.make?(' · '+escapeHtml(e.make)):''}</h3>
+    <div class="kv"><span class="k">Serial / tag</span><span class="v">${escapeHtml(e.serial||'—')}</span></div>
+    <div class="kv"><span class="k">Location</span><span class="v">${escapeHtml(e.location||'—')}</span></div>
+    <div class="kv"><span class="k">Recharged</span><span class="v">${escapeHtml(ym(e.rechargeDate)||'—')}</span></div>
+    <div class="kv"><span class="k">Extinguishing medium</span><span class="v">${escapeHtml(e.rechargeMedium||'—')}</span></div>
+    <div class="kv"><span class="k">Pressure before → after</span><span class="v">${escapeHtml(e.rechargePressureBefore||'—')} → ${escapeHtml(e.rechargePressureAfter||'—')} kPa</span></div>
+    <div class="kv"><span class="k">Recharged by</span><span class="v">${escapeHtml(e.rechargeTechnicianName||'—')}${e.rechargeTechnicianSaqcc?(' — '+escapeHtml(e.rechargeTechnicianSaqcc)):''}</span></div>
+    ${e.rechargeNotes?`<div class="kv"><span class="k">Notes</span><span class="v">${escapeHtml(e.rechargeNotes)}</span></div>`:''}
+    <div class="rep-check"><strong>Checklist — SANS 1475</strong>${checklistUL(RC_CHECKLIST, e.rechargeChecklist)}</div>
+  </div>`).join('');
+  showReport('Recharge report', head + blocks);
+}
+
+/* ---------- Calibration register (company-wide, weekly checks) ---------- */
+let calibrationsCache = [];
+function calTypeLabel(t){
+  return { scale:'Weighing scale', gauge:'Working pressure gauge', master:'Master pressure gauge', other:'Other test equipment' }[t] || t || '';
+}
+function renderCalibrationView(){
+  const dEl = document.getElementById('calDate');
+  if(dEl && !dEl.value) dEl.value = toLocalISO(new Date());
+  const tEl = document.getElementById('calTech');
+  if(tEl && !tEl.value) tEl.value = currentProfile.name || '';
+  if(unsubCal) unsubCal();
+  unsubCal = db.collection('calibrations').onSnapshot(snap=>{
+    calibrationsCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    calibrationsCache.sort((a,b)=>(b.checkDate||'').localeCompare(a.checkDate||''));
+    paintCalibrations();
+  }, err=>{ toast('Could not load calibration register: ' + err.message); });
+}
+async function loadCalibrations(){
+  try{
+    const snap = await db.collection('calibrations').get();
+    calibrationsCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    calibrationsCache.sort((a,b)=>(b.checkDate||'').localeCompare(a.checkDate||''));
+  }catch(_){}
+}
+function paintCalibrations(){
+  const wrap = document.getElementById('calList');
+  if(!wrap) return;
+  if(calibrationsCache.length===0){ wrap.innerHTML = `<div class="empty">No checks recorded yet.</div>`; return; }
+  wrap.innerHTML = calibrationsCache.slice(0,50).map(c=>`
+    <div class="insp-row status-${c.result==='fail'?'fail':'pass'}">
+      <div class="top">
+        <span class="date">${escapeHtml(c.checkDate||'')} · ${escapeHtml(calTypeLabel(c.type))}</span>
+        <span class="pill ${c.result==='fail'?'fail':'pass'}">${c.result==='fail'?'Fail':'Pass'}</span>
+      </div>
+      <div class="sub">${escapeHtml(c.equipment||'')}${c.reference?(' · ref '+escapeHtml(c.reference)):''}${c.reading?(' · '+escapeHtml(c.reading)):''}${c.deviation?(' · dev '+escapeHtml(c.deviation)):''}</div>
+      <div class="sub">Checked by ${escapeHtml(c.technicianName||'—')}${c.action?(' · '+escapeHtml(c.action)):''}${currentRole==='admin'?` · <span onclick="deleteCalibrationEntry('${c.id}')" style="color:var(--red-dark); cursor:pointer; font-weight:700;">delete</span>`:''}</div>
+    </div>`).join('');
+}
+async function saveCalibrationEntry(){
+  const checkDate = document.getElementById('calDate').value;
+  const equipment = document.getElementById('calEquip').value.trim();
+  if(!checkDate || !equipment){ toast('Enter at least the date and the equipment checked'); return; }
+  const payload = {
+    checkDate,
+    type: document.getElementById('calType').value,
+    equipment,
+    reference: document.getElementById('calRef').value.trim(),
+    reading: document.getElementById('calReading').value.trim(),
+    deviation: document.getElementById('calDeviation').value.trim(),
+    result: document.getElementById('calResult').value,
+    action: document.getElementById('calAction').value.trim(),
+    technicianName: document.getElementById('calTech').value.trim() || currentProfile.name || '',
+    technicianSaqcc: currentProfile.saqcc || '',
+    createdBy: currentUser.uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  try{
+    await db.collection('calibrations').add(payload);
+    ['calEquip','calRef','calReading','calDeviation','calAction'].forEach(id=>document.getElementById(id).value='');
+    toast('Check added to the register');
+  }catch(e){ toast('Error: ' + e.message); }
+}
+async function deleteCalibrationEntry(id){
+  if(currentRole!=='admin') return;
+  if(!confirm('Delete this calibration entry?')) return;
+  try{ await db.collection('calibrations').doc(id).delete(); toast('Entry deleted'); }
+  catch(e){ toast('Error: ' + e.message); }
+}
+async function openCalibrationReport(){
+  toast('Building register…');
+  await loadCompanySettings();
+  await loadCalibrations();
+  const co = companySettings || {};
+  const today = toLocalISO(new Date());
+  const rows = calibrationsCache.map(c=>`<tr>
+    <td>${escapeHtml(c.checkDate||'')}</td>
+    <td>${escapeHtml(calTypeLabel(c.type))}</td>
+    <td>${escapeHtml(c.equipment||'')}</td>
+    <td>${escapeHtml(c.reference||'')}</td>
+    <td>${escapeHtml(c.reading||'')}</td>
+    <td>${escapeHtml(c.deviation||'')}</td>
+    <td>${c.result==='fail'?'Fail':'Pass'}</td>
+    <td>${escapeHtml(c.action||'')}</td>
+    <td>${escapeHtml(c.technicianName||'')}</td>
+  </tr>`).join('') || `<tr><td colspan="9">No calibration checks recorded yet.</td></tr>`;
+  showReport('Calibration register', `${letterheadHTML(co)}
+    <h2 style="margin-top:16px; font-size:1rem;">Test Equipment Calibration Register (SANS 1475 Annex A)</h2>
+    <div class="meta"><strong>Generated:</strong> ${today}<br><strong>Entries:</strong> ${calibrationsCache.length}</div>
+    <div class="hint" style="margin:6px 0 10px;">Production-control equipment (scales, working and master pressure gauges) is checked against reference instruments at least weekly; results are recorded below.</div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Date</th><th>Type</th><th>Equipment</th><th>Reference used</th><th>Reading</th><th>Deviation</th><th>Result</th><th>Action</th><th>Checked by</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`, 'view-calibration');
 }
 function escapeHtml(s){
   if(s===undefined || s===null || s==='') return '';

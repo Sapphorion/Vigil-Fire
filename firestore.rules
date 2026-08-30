@@ -44,6 +44,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Test-equipment calibration register (SANS 1475 Annex A). Weekly checks are
+    // performed by technicians, so any signed-in user may add an entry; only an
+    // admin may change or remove one.
+    match /calibrations/{id} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
     // An "equipment" doc is the physical asset (type, serial, location) plus a
     // denormalised snapshot of its most recent inspection for list rendering.
     match /equipment/{eqId} {
