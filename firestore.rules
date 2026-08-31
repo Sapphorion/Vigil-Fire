@@ -57,6 +57,15 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Monthly responsible-person inspection log (SANS 10105-1). One record per
+    // site per month. Same access as the site's equipment; admin may delete.
+    match /monthlyChecks/{id} {
+      allow read:          if isAdmin() || (isSignedIn() && isAssignedToSite(resource.data.siteId));
+      allow create:        if isAdmin() || (isSignedIn() && isAssignedToSite(request.resource.data.siteId));
+      allow update:        if isAdmin() || (isSignedIn() && isAssignedToSite(resource.data.siteId));
+      allow delete:        if isAdmin();
+    }
+
     // An "equipment" doc is the physical asset (type, serial, location) plus a
     // denormalised snapshot of its most recent inspection for list rendering.
     match /equipment/{eqId} {

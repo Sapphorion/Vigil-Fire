@@ -207,6 +207,8 @@
   .cert .rep-check{margin-top:10px; font-size:0.82rem;}
   .cert .rep-check ul{margin:6px 0 0; padding-left:20px;}
   .cert .rep-check li{margin:3px 0;}
+  .cert table.mlog{font-size:0.72rem;}
+  .cert table.mlog th, .cert table.mlog td{padding:3px 4px;}
 
   /* "What was done" checkbox lists (pressure test / recharge) */
   .chk{display:flex; gap:10px; align-items:flex-start; margin:0; padding:9px 0; border-bottom:1px solid var(--line);
@@ -224,6 +226,9 @@
     .card { border:none; padding:0; margin:0; }
     .cert table { font-size:0.72rem; }
     .cert th, .cert td { padding:4px 6px; }
+    .cert .tablewrap{ overflow:visible; }
+    .cert table.mlog{ font-size:0.6rem; }
+    .cert table.mlog th, .cert table.mlog td{ padding:2px 3px; }
     .cert .regpage + .regpage{ break-before:page; margin-top:0; padding-top:0; border-top:none; }
     .cert .rep-item{ break-inside:avoid; }
   }
@@ -309,6 +314,8 @@
 
       <button class="btn secondary" id="registerBtn" style="margin-bottom:8px; display:none;" onclick="openRegister(currentSiteId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Printable register</button>
       <div id="registerBlockNote" class="hint" style="display:none; color:var(--red-dark); margin:0 0 14px 2px;"></div>
+
+      <button class="btn secondary" style="margin-bottom:14px;" onclick="openMonthlyCheck(currentSiteId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>Monthly inspection</button>
 
       <button class="btn" onclick="openEquipmentForm(null)" style="margin-bottom:10px;">+ Add equipment</button>
 
@@ -479,6 +486,28 @@
       </div>
     </section>
 
+    <!-- ===== MONTHLY RESPONSIBLE-PERSON INSPECTION (SANS 10105-1) ===== -->
+    <section id="view-monthly" class="view">
+      <div class="backbar"><button onclick="showView('view-site-detail')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h2 id="monthlyTitle">Monthly inspection</h2></div>
+      <p class="hint" style="margin:0 0 12px;">SANS 10105-1: the responsible person visually checks each unit every month — correct location, unobstructed and visible, safety pin and tamper seal intact, pressure indicator in range, no visible damage or corrosion, service label current. Record the walk-through here; use the printable log for a signed record on site.</p>
+      <div class="card">
+        <div class="row">
+          <div><label style="margin-top:0;">Month</label><input id="monthlyMonth" type="month"></div>
+          <div><label style="margin-top:0;">Checked by (responsible person)</label><input id="monthlyBy" placeholder="Name"></div>
+        </div>
+        <label>Equipment</label>
+        <div id="monthlyList"></div>
+        <label>Notes</label>
+        <textarea id="monthlyNotes" placeholder="Any faults reported, actions requested, etc."></textarea>
+        <button class="btn" style="margin-top:16px;" onclick="saveMonthlyCheck()">Save monthly check</button>
+      </div>
+      <div class="section-title">
+        <h2>Recent months</h2>
+        <button class="btn secondary" style="width:auto; padding:8px 14px;" onclick="openMonthlyLog(currentSiteId, 'view-monthly')">Printable log</button>
+      </div>
+      <div id="monthlyRecent"><div class="empty">Loading…</div></div>
+    </section>
+
     <!-- ===== DUE & OVERDUE DASHBOARD (shared) ===== -->
     <section id="view-due" class="view">
       <div class="section-title"><h2>Due &amp; overdue</h2></div>
@@ -550,6 +579,7 @@
         <button class="btn secondary" style="margin-top:6px;" onclick="openRegister(reportSiteId(), 'view-export')">Printable site register</button>
         <button class="btn secondary" style="margin-top:8px;" onclick="openPressureTestReport()">Pressure test report</button>
         <button class="btn secondary" style="margin-top:8px;" onclick="openRechargeReport()">Recharge report</button>
+        <button class="btn secondary" style="margin-top:8px;" onclick="openMonthlyLog(reportSiteId(), 'view-export')">Monthly inspection log</button>
         <div class="hint">Choose a single site above. The site register here is the same one you generate from the site itself. The pressure test and recharge reports cover the equipment whose latest record shows that work was performed. The calibration register is on its own tab.</div>
       </div>
     </section>
@@ -776,18 +806,19 @@ let editingAssetId = null;       // equipment item being created/edited on the f
 let editingSiteId = null;
 let editingTechId = null;
 
-const SITES_VIEWS = ['view-sites','view-site-form','view-site-detail','view-equipment-form','view-certificate','view-register'];
+const SITES_VIEWS = ['view-sites','view-site-form','view-site-detail','view-equipment-form','view-monthly','view-certificate','view-register'];
 let registerBackView = 'view-site-detail';   // where the printable register's Back returns to
 function showView(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   const registerFromExport = id==='view-register' && registerBackView==='view-export';
-  document.getElementById('navSites').classList.toggle('active', SITES_VIEWS.includes(id) && !registerFromExport);
+  const sitesReport = id==='view-report' && ['view-site-detail','view-monthly'].includes(reportBackView);
+  document.getElementById('navSites').classList.toggle('active', (SITES_VIEWS.includes(id) && !registerFromExport) || sitesReport);
   document.getElementById('navDue').classList.toggle('active', id==='view-due');
   document.getElementById('navTechnicians').classList.toggle('active', ['view-technicians','view-tech-form'].includes(id));
   document.getElementById('navCompany').classList.toggle('active', id==='view-company');
   const calReport = id==='view-report' && reportBackView==='view-calibration';
-  document.getElementById('navExport').classList.toggle('active', id==='view-export' || registerFromExport || (id==='view-report' && !calReport));
+  document.getElementById('navExport').classList.toggle('active', id==='view-export' || registerFromExport || (id==='view-report' && !calReport && !sitesReport));
   document.getElementById('navCalibration').classList.toggle('active', id==='view-calibration' || calReport);
   if(id==='view-sites') renderSites();
   if(id==='view-due') renderDueDashboard();
@@ -2286,6 +2317,209 @@ async function openCalibrationReport(){
       <thead><tr><th>Date</th><th>Type</th><th>Equipment</th><th>Reference used</th><th>Reading</th><th>Deviation</th><th>Result</th><th>Action</th><th>Checked by</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`, 'view-calibration');
+}
+
+/* ---------- Monthly responsible-person inspection (SANS 10105-1) ----------
+   One record per site per month, with an OK / fault result for each active
+   item. `monthlyChecks` collection, doc id `${siteId}_${month}`. */
+const MONTHLY_CRITERIA = [
+  'In the correct designated position, unobstructed and clearly visible',
+  'Safety pin and tamper seal in place and intact',
+  'Pressure indicator (where fitted) reads in the operating range',
+  'No visible damage, corrosion, leakage or blocked nozzle / hose',
+  'Operating instructions legible and facing outwards',
+  'Service label current — annual service not overdue'
+];
+let monthlyChecksCache = [];   // {id, siteId, month, checkedByName, results:{}, faultNotes:{}, notes}
+let monthlyEditMonth = null;
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function monthLabel(m){ const p = ym(m).split('-'); return p.length===2 ? `${MONTH_NAMES[(+p[1])-1]} ${p[0].slice(2)}` : ''; }
+
+async function loadMonthlyChecks(siteId){
+  try{
+    const snap = await db.collection('monthlyChecks').where('siteId','==', siteId).get();
+    monthlyChecksCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    monthlyChecksCache.sort((a,b)=>(b.month||'').localeCompare(a.month||''));
+  }catch(_){ monthlyChecksCache = []; }
+}
+
+async function openMonthlyCheck(siteId){
+  if(!siteId){ toast('Open a site first'); return; }
+  currentSiteId = siteId;
+  const site = sitesCache.find(s=>s.id===siteId) || {};
+  document.getElementById('monthlyTitle').textContent = 'Monthly inspection — ' + (site.name||'site');
+  toast('Loading…');
+  // Make sure we have this site's equipment loaded
+  if(!equipmentCache.length || equipmentCache[0].siteId !== siteId){
+    try{
+      const snap = await db.collection('equipment').where('siteId','==', siteId).get();
+      equipmentCache = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    }catch(_){}
+  }
+  await loadMonthlyChecks(siteId);
+  monthlyEditMonth = null;
+  document.getElementById('monthlyMonth').value = thisMonth();
+  document.getElementById('monthlyBy').value = '';
+  document.getElementById('monthlyNotes').value = '';
+  document.getElementById('monthlyMonth').onchange = loadMonthlyIntoForm;
+  loadMonthlyIntoForm();
+  renderMonthlyRecent();
+  showView('view-monthly');
+}
+
+function activeEquipSorted(){
+  return equipmentCache.filter(isActive)
+    .sort((a,b)=>(a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
+}
+
+let monthlyResults = {};      // { equipmentId: 'ok' | 'fault' }
+let monthlyFaultNotes = {};    // { equipmentId: string }
+function loadMonthlyIntoForm(){
+  const month = document.getElementById('monthlyMonth').value;
+  const existing = monthlyChecksCache.find(c=>ym(c.month)===ym(month));
+  monthlyEditMonth = existing ? existing.month : null;
+  document.getElementById('monthlyBy').value    = existing ? (existing.checkedByName||'') : (document.getElementById('monthlyBy').value || '');
+  document.getElementById('monthlyNotes').value = existing ? (existing.notes||'') : '';
+  monthlyResults = Object.assign({}, (existing && existing.results) || {});
+  monthlyFaultNotes = Object.assign({}, (existing && existing.faultNotes) || {});
+  renderMonthlyList();
+}
+function renderMonthlyList(){
+  const items = activeEquipSorted();
+  const wrap = document.getElementById('monthlyList');
+  if(items.length===0){ wrap.innerHTML = `<div class="empty">No equipment in service at this site.</div>`; return; }
+  wrap.innerHTML = items.map(e=>{
+    const v = monthlyResults[e.id] || null;
+    return `<div style="padding:10px 0; border-bottom:1px solid var(--line);">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div style="flex:1; font-size:0.9rem;">${escapeHtml(typeLabel(e.type))}${e.serial?(' · '+escapeHtml(e.serial)):''}<div class="hint" style="margin:2px 0 0;">${escapeHtml(e.location||'No location noted')}</div></div>
+        <div class="toggle" style="flex-shrink:0;">
+          <button type="button" class="${v==='ok'?'active pass':''}" onclick="setMonthly('${e.id}','ok')">OK</button>
+          <button type="button" class="${v==='fault'?'active fail':''}" onclick="setMonthly('${e.id}','fault')">Fault</button>
+        </div>
+      </div>
+      ${v==='fault' ? `<input placeholder="Fault detail" value="${escapeHtml(monthlyFaultNotes[e.id]||'')}" oninput="monthlyFaultNotes['${e.id}']=this.value" style="margin-top:8px;">` : ''}
+    </div>`;
+  }).join('');
+}
+function setMonthly(eqId, val){
+  monthlyResults[eqId] = (monthlyResults[eqId]===val) ? null : val;
+  if(monthlyResults[eqId] !== 'fault') delete monthlyFaultNotes[eqId];
+  renderMonthlyList();
+}
+
+async function saveMonthlyCheck(){
+  const month = document.getElementById('monthlyMonth').value;
+  if(!month){ toast('Pick a month'); return; }
+  const results = {}, faultNotes = {};
+  Object.entries(monthlyResults).forEach(([k,v])=>{
+    if(v==='ok' || v==='fault') results[k] = v;
+    if(v==='fault' && monthlyFaultNotes[k] && monthlyFaultNotes[k].trim()) faultNotes[k] = monthlyFaultNotes[k].trim();
+  });
+  const payload = {
+    siteId: currentSiteId,
+    month,
+    checkedByName: document.getElementById('monthlyBy').value.trim(),
+    checkedBy: currentUser.uid,
+    recordedByName: currentProfile.name || '',
+    results, faultNotes,
+    notes: document.getElementById('monthlyNotes').value.trim(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  const docId = currentSiteId + '_' + month;
+  try{
+    await db.collection('monthlyChecks').doc(docId).set(payload, {merge:true});
+    toast('Monthly check saved');
+    await loadMonthlyChecks(currentSiteId);
+    renderMonthlyRecent();
+  }catch(e){ toast('Error: ' + e.message); }
+}
+
+function renderMonthlyRecent(){
+  const wrap = document.getElementById('monthlyRecent');
+  if(monthlyChecksCache.length===0){ wrap.innerHTML = `<div class="empty">No monthly checks recorded yet.</div>`; return; }
+  wrap.innerHTML = monthlyChecksCache.slice(0,12).map(c=>{
+    const vals = Object.values(c.results||{});
+    const ok = vals.filter(v=>v==='ok').length;
+    const faults = vals.filter(v=>v==='fault').length;
+    return `<div class="insp-row status-${faults?'fail':'pass'}" onclick="document.getElementById('monthlyMonth').value='${ym(c.month)}'; loadMonthlyIntoForm(); window.scrollTo(0,0);">
+      <div class="top">
+        <span class="date">${escapeHtml(monthLabel(c.month))}</span>
+        <span class="pill ${faults?'fail':'pass'}">${faults?(faults+' fault'+(faults===1?'':'s')):(ok+' OK')}</span>
+      </div>
+      <div class="sub">${escapeHtml(c.checkedByName||'—')}${c.notes?(' · '+escapeHtml(c.notes)):''}</div>
+    </div>`;
+  }).join('');
+}
+
+async function openMonthlyLog(siteId, backView){
+  if(!siteId){ toast('Choose a single site above'); return; }
+  const site = sitesCache.find(s=>s.id===siteId);
+  if(!site){ toast('Site not found'); return; }
+  toast('Building log…');
+  await loadCompanySettings();
+  let items = [];
+  try{
+    const snap = await db.collection('equipment').where('siteId','==', siteId).get();
+    items = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(e=>!e.condemned);
+  }catch(e){ toast('Could not load equipment: ' + e.message); return; }
+  items.sort((a,b)=>(a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
+  await loadMonthlyChecks(siteId);
+  const co = companySettings || {};
+  const today = toLocalISO(new Date());
+
+  // Rolling window: current month back 11 months (oldest → newest)
+  const cm = thisMonth();
+  const months = [];
+  for(let i=11; i>=0; i--) months.push(addMonths(cm, -i));
+  const byMonth = {};
+  monthlyChecksCache.forEach(c=>{ byMonth[ym(c.month)] = c; });
+
+  const headCells = months.map(m=>`<th style="text-align:center; font-size:0.7rem;">${escapeHtml(monthLabel(m))}</th>`).join('');
+  const bodyRows = items.map(e=>{
+    const cells = months.map(m=>{
+      const rec = byMonth[m];
+      const v = rec && rec.results ? rec.results[e.id] : null;
+      const mark = v==='ok' ? '✓' : (v==='fault' ? 'F' : '');
+      return `<td style="text-align:center;">${mark}</td>`;
+    }).join('');
+    return `<tr><td>${escapeHtml(typeLabel(e.type))}</td><td>${escapeHtml(e.serial||'')}</td><td>${escapeHtml(e.location||'')}</td>${cells}</tr>`;
+  }).join('') || `<tr><td colspan="${3+months.length}">No equipment in service at this site.</td></tr>`;
+
+  // Faults recorded in the window
+  const faultLines = [];
+  months.forEach(m=>{
+    const rec = byMonth[m];
+    if(!rec) return;
+    Object.entries(rec.results||{}).forEach(([eqId,v])=>{
+      if(v!=='fault') return;
+      const it = items.find(x=>x.id===eqId) || {};
+      faultLines.push(`<li>${escapeHtml(monthLabel(m))} — ${escapeHtml(typeLabel(it.type)||'item')}${it.serial?(' '+escapeHtml(it.serial)):''}${it.location?(' ('+escapeHtml(it.location)+')'):''}: ${escapeHtml((rec.faultNotes||{})[eqId]||'fault reported')}</li>`);
+    });
+  });
+
+  const signRow = months.map(()=>`<td style="height:34px;"></td>`).join('');
+
+  showReport('Monthly inspection log', `${letterheadHTML(co)}
+    <h2 style="margin-top:16px; font-size:1rem;">Monthly Inspection Log — Portable Fire Equipment (SANS 10105-1)</h2>
+    <div class="meta">
+      <strong>Site:</strong> ${escapeHtml(site.name)}<br>
+      ${site.address ? '<strong>Address:</strong> '+escapeHtml(site.address)+'<br>' : ''}
+      <strong>Generated:</strong> ${today}<br>
+      <strong>Period:</strong> ${escapeHtml(monthLabel(months[0]))} – ${escapeHtml(monthLabel(months[11]))}
+    </div>
+    <div class="rep-check"><strong>Monthly check by the responsible person — confirm for every unit:</strong>
+      <ul>${MONTHLY_CRITERIA.map(c=>`<li>${escapeHtml(c)}</li>`).join('')}</ul>
+      <div class="hint">Mark ✓ where the unit passed, F where a fault was found (detail below), or initial the cell by hand. Report any fault to the servicing company.</div>
+    </div>
+    <div class="tablewrap"><table class="mlog">
+      <thead><tr><th>Type</th><th>Serial / tag</th><th>Location</th>${headCells}</tr></thead>
+      <tbody>${bodyRows}</tbody>
+      <tfoot><tr><td colspan="3"><strong>Checked by / initials</strong></td>${signRow}</tr></tfoot>
+    </table></div>
+    ${faultLines.length ? `<h3 style="margin-top:16px;">Faults recorded</h3><ul style="font-size:0.85rem;">${faultLines.join('')}</ul>` : ''}
+    <div class="hint" style="margin-top:14px;">Generated by Vigil Fire on ${today}. Print in landscape and keep this log on site with the fire equipment; the responsible person completes it every month between annual services.</div>`,
+    backView || 'view-export');
 }
 function escapeHtml(s){
   if(s===undefined || s===null || s==='') return '';
