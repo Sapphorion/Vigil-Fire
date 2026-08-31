@@ -474,7 +474,7 @@
     <!-- ===== COMPANY PROFILE (admin only) ===== -->
     <section id="view-company" class="view">
       <div class="section-title"><h2>Company profile</h2></div>
-      <p class="hint" style="margin:0 0 12px 0;">Your logo and details appear as the letterhead on generated certificates and the printable site register, and identify your CSV exports.</p>
+      <p class="hint" style="margin:0 0 12px 0;">Your logo and details appear as the letterhead on generated certificates, the printable site register and every report.</p>
       <div class="card">
         <label style="margin-top:0;">Company logo</label>
         <div class="logo-box">
@@ -495,17 +495,14 @@
       </div>
     </section>
 
-    <!-- ===== EXPORT & REPORTS (admin) ===== -->
+    <!-- ===== REPORTS (admin) ===== -->
     <section id="view-export" class="view">
-      <h2>Export &amp; reports</h2>
-      <p class="hint" style="font-size:0.85rem; margin-bottom:16px;">Export regularly to keep a filed backup. Reports are letterheaded with your Company profile details.</p>
+      <h2>Reports</h2>
+      <p class="hint" style="font-size:0.85rem; margin-bottom:16px;">Letterheaded printable reports, headed with your Company profile details.</p>
       <div class="card">
         <label style="margin-top:0;">Site</label>
         <select id="exportSiteFilter"></select>
-        <button class="btn" style="margin-top:14px;" onclick="exportCSV()">Export all records as CSV</button>
-
-        <div class="divider"></div>
-        <label style="margin-top:0;">Per-site reports</label>
+        <label style="margin-top:16px;">Per-site reports</label>
         <button class="btn secondary" style="margin-top:6px;" onclick="openRegister(reportSiteId(), 'view-export')">Printable site register</button>
         <button class="btn secondary" style="margin-top:8px;" onclick="openPressureTestReport()">Pressure test report</button>
         <button class="btn secondary" style="margin-top:8px;" onclick="openRechargeReport()">Recharge report</button>
@@ -594,7 +591,7 @@
     <button id="navCalibration" style="display:none;" onclick="showView('view-calibration')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg></span><span>Calib.</span></button>
     <button id="navTechnicians" style="display:none;" onclick="showView('view-technicians')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Techs</span></button>
     <button id="navCompany" style="display:none;" onclick="showView('view-company')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span><span>Company</span></button>
-    <button id="navExport" style="display:none;" onclick="showView('view-export')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></span><span>Export</span></button>
+    <button id="navExport" style="display:none;" onclick="showView('view-export')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg></span><span>Reports</span></button>
   </nav>
 </div>
 
@@ -1904,60 +1901,10 @@ async function reactivateTechnician(id){
   }catch(e){ toast('Error: ' + e.message); }
 }
 
-/* ---------- Export ---------- */
+/* ---------- Reports tab ---------- */
 function refreshExport(){
   const sel = document.getElementById('exportSiteFilter');
-  sel.innerHTML = '<option value="all">All my sites</option>' + sitesCache.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
-}
-async function exportCSV(){
-  const filter = document.getElementById('exportSiteFilter').value;
-  const siteIds = filter==='all' ? sitesCache.map(s=>s.id) : [filter];
-  if(siteIds.length===0){ toast('No sites to export'); return; }
-  toast('Gathering records…');
-  if(!companySettings || !companySettings.name) await loadCompanySettings();
-
-  // One row per equipment item, from its current recorded state.
-  const rows = [];
-  for(const sid of siteIds){
-    const site = sitesCache.find(s=>s.id===sid);
-    const eqSnap = await db.collection('equipment').where('siteId','==', sid).get();
-    for(const d of eqSnap.docs){
-      const e = { id:d.id, ...d.data() };
-      const checklistStr = Object.entries(e.checklist||{}).map(([k,v])=>`${k}:${v}`).join('; ');
-      const rechargeCol = e.rechargeRequired ? (e.rechargeDate ? ('Recharged '+ym(e.rechargeDate)) : 'Recharge outstanding') : '';
-      rows.push([
-        site?site.name:'', typeLabel(e.type), e.size, e.make, e.serial, e.location, e.mfgDate,
-        ym(e.inspectionDate), ym(e.serviceDate), ym(e.nextServiceDue), ym(e.pressureTestDate), ym(e.pressureTestDue),
-        rechargeCol, e.inspectionDate?statusLabel(e.status):'Not inspected', checklistStr, e.technicianName||'', e.saqcc||'', e.notes||''
-      ]);
-    }
-  }
-  if(rows.length===0){ toast('No records to export'); return; }
-
-  const headers = ['Site','Type','Size','Make','Asset Tag / Serial','Location','Manufacture Date','Inspection Date','Service Date','Next Service Due','Last Pressure Test','Pressure Test Due','Recharge','Overall Status','Checklist','Technician','SAQCC No.','Notes'];
-  const co = companySettings || {};
-  const metaLines = [
-    ['Company', co.name], ['Registration', co.reg], ['Address', co.address],
-    ['Phone', co.phone], ['Email', co.email], ['Exported', toLocalISO(new Date())]
-  ].filter(([,v])=>v).map(pair=>pair.map(csvEscape).join(','));
-  const lines = metaLines
-    .concat(metaLines.length ? [''] : [])
-    .concat([headers.map(csvEscape).join(',')])
-    .concat(rows.map(r=>r.map(csvEscape).join(',')));
-  const csv = String.fromCharCode(0xFEFF) + lines.join('\r\n');   // BOM so Excel reads UTF-8
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const scopeName = filter==='all' ? 'all-sites' : (sitesCache.find(s=>s.id===filter)?.name||'site').replace(/[^a-z0-9]+/gi,'-').toLowerCase();
-  a.href = url; a.download = `fire-equipment-${scopeName}-${toLocalISO(new Date())}.csv`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-  toast('CSV downloaded');
-}
-function csvEscape(v){
-  v = (v===undefined || v===null) ? '' : String(v);
-  if(/^[=+\-@\t\r]/.test(v)) v = "'" + v;          // neutralise spreadsheet formula injection
-  if(/[",\n\r]/.test(v)) return '"' + v.replace(/"/g,'""') + '"';
-  return v;
+  sel.innerHTML = '<option value="all">Choose a site…</option>' + sitesCache.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
 }
 
 /* ========================================================================
