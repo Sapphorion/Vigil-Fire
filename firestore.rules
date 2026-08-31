@@ -66,6 +66,16 @@ service cloud.firestore {
       allow delete:        if isAdmin();
     }
 
+    // Immutable service-history / audit trail. One snapshot is appended whenever
+    // an equipment record's compliance fields change. Write-once: no one may
+    // edit or delete an entry (corrections are made by adding a new one).
+    // Purging genuinely bad data is a Firebase Console operation.
+    match /serviceEvents/{id} {
+      allow read:          if isAdmin() || (isSignedIn() && isAssignedToSite(resource.data.siteId));
+      allow create:        if isAdmin() || (isSignedIn() && isAssignedToSite(request.resource.data.siteId));
+      allow update, delete: if false;
+    }
+
     // An "equipment" doc is the physical asset (type, serial, location) plus a
     // denormalised snapshot of its most recent inspection for list rendering.
     match /equipment/{eqId} {
