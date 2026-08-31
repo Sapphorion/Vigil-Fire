@@ -350,13 +350,39 @@
         <div><label>Next service due</label><input id="eqNextDue" type="month"></div>
         <div class="hint">Dates are recorded as month and year. Next service auto-fills to 1 year after the service month (annual servicing per SANS 1475).</div>
 
+        <div id="massSection">
+          <div class="divider"></div>
+          <label style="margin-top:0;">Mass &amp; weight check</label>
+          <label>Actual mass at this service (kg)</label>
+          <input id="eqServiceMass" inputmode="decimal" placeholder="e.g. 14.2" oninput="updateCo2Content()">
+          <div class="hint">Recorded on the service label (SANS 1475 clause 6.1). Weigh the extinguisher per the manufacturer's instructions.</div>
+          <div id="co2WeightWrap" style="display:none;">
+            <div class="row">
+              <div><label>Empty cylinder / tare mass (kg)</label><input id="eqTareMass" inputmode="decimal" placeholder="stamped on the cylinder" oninput="updateCo2Content()"></div>
+              <div><label>CO₂ content <span id="co2ContentHint" style="text-transform:none;font-weight:500;"></span></label><input id="eqCo2Content" class="readonly-field" style="border:1px solid var(--line);" readonly></div>
+            </div>
+            <div class="row">
+              <div><label>Last CO₂ weight check</label><input id="eqWeightCheckDate" type="month" onchange="onWeightCheckDateChange()"></div>
+              <div><label>Weight check due <span style="text-transform:none;font-weight:500;">(6 mths)</span></label><input id="eqWeightCheckDue" type="month"></div>
+            </div>
+            <div class="hint">CO₂ and gas-cartridge extinguishers are weighed every 6 months (SANS 10105-1). Recharge if the content is below the manufacturer's tolerance.</div>
+          </div>
+        </div>
+
         <div class="divider"></div>
-        <label style="margin-top:0;">Pressure test</label>
+        <label style="margin-top:0;" id="ptSectionLabel">Pressure test</label>
         <div class="row">
           <div><label>Last pressure test</label><input id="eqPressureTestDate" type="month" onchange="onPressureTestDateChange()"></div>
           <div><label>Pressure test due <span id="ptHint" style="text-transform:none;font-weight:500;"></span></label><input id="eqPressureTestDue" type="month"></div>
         </div>
-        <div class="hint">"Pressure test due" auto-fills to 5 years after the last test for powder, foam and water extinguishers, or 10 years for CO₂. Hydrants, hose reels, sirens and blankets get no auto-filled date. The last-test month carries over between services — change it only in the year a test is actually done.</div>
+        <div class="hint" id="ptSectionHint">"Pressure test due" auto-fills to 5 years after the last test for powder, foam and water extinguishers, or 10 years for CO₂. Hydrants, sirens and blankets get no auto-filled date. The last-test month carries over between services — change it only in the year a test is actually done.</div>
+        <div id="hoseReplaceWrap" style="display:none;">
+          <div class="row">
+            <div><label>Hose last replaced</label><input id="eqHoseReplacedDate" type="month" onchange="onHoseReplacedDateChange()"></div>
+            <div><label>Hose replacement due <span style="text-transform:none;font-weight:500;">(5 yrs)</span></label><input id="eqHoseReplacedDue" type="month"></div>
+          </div>
+          <div class="hint">The hose-reel hose is replaced every 5 years (SANS 543 / manufacturer), independent of the annual flow-and-pressure test.</div>
+        </div>
         <label>Pressure (hydrostatic) test performed this service?</label>
         <select id="eqPtPerformed" onchange="onPtPerformedChange()">
           <option value="no">No</option>
@@ -405,6 +431,24 @@
           <div id="rcChecklistWrap"></div>
           <label>Recharge notes</label>
           <textarea id="eqRcNotes" placeholder="Any additional observations"></textarea>
+        </div>
+
+        <div class="divider"></div>
+        <label style="margin-top:0;">Remove from service / condemn</label>
+        <select id="eqCondemned" onchange="onCondemnedChange()">
+          <option value="no">In service</option>
+          <option value="yes">Condemned / removed from service</option>
+        </select>
+        <div id="condemnWrap" style="display:none;">
+          <label>Date removed from service</label>
+          <input id="eqCondemnedDate" type="month">
+          <label>Reason</label>
+          <input id="eqCondemnedReason" placeholder="e.g. severe corrosion, failed pressure test">
+          <label>Condemning criteria — SANS 1475 clause 5.2.6</label>
+          <div id="condemnChecklistWrap"></div>
+          <label>Replaced by (new asset tag / serial, if applicable)</label>
+          <input id="eqReplacedBy" placeholder="e.g. FW-0417">
+          <div class="hint">A condemned cylinder is indelibly marked "CONDEMNED" and returned to the owner un-assembled (clause 5.3.6). It stays in the register history but is dropped from the active equipment count, the compliance summary and the Due list.</div>
         </div>
 
         <div class="divider"></div>
@@ -1042,6 +1086,7 @@ async function openCertificate(siteId){
     const snap = await db.collection('equipment').where('siteId','==', siteId).get();
     items = snap.docs.map(d=>({id:d.id, ...d.data()}));
   }catch(e){ toast('Could not load equipment: ' + e.message); return; }
+  items = items.filter(e=>!e.condemned);
   items.sort((a,b)=>(a.location||'').localeCompare(b.location||''));
 
   const co = companySettings || {};
@@ -1052,12 +1097,13 @@ async function openCertificate(siteId){
     <td>${escapeHtml(typeLabel(e.type))}</td>
     <td>${escapeHtml(e.serial||'')}</td>
     <td>${escapeHtml(e.location||'')}</td>
+    <td>${escapeHtml(e.serviceMass||'')}</td>
     <td>${escapeHtml(ym(e.serviceDate))}</td>
     <td>${escapeHtml(ym(e.nextServiceDue))}</td>
     <td>${escapeHtml(ym(e.pressureTestDate))}</td>
     <td>${escapeHtml(ym(e.pressureTestDue))}</td>
     <td>${escapeHtml(statusLabel(e.status))}</td>
-  </tr>`).join('') || `<tr><td colspan="8">No equipment recorded at this site.</td></tr>`;
+  </tr>`).join('') || `<tr><td colspan="9">No equipment recorded at this site.</td></tr>`;
 
   document.getElementById('certContent').innerHTML = `<div class="cert">
     ${co.logo ? `<img class="logo" src="${co.logo}" alt="">` : ''}
@@ -1076,7 +1122,7 @@ async function openCertificate(siteId){
       <strong>Equipment items:</strong> ${items.length}
     </div>
     <table>
-      <thead><tr><th>Type</th><th>Serial / tag</th><th>Location</th><th>Serviced</th><th>Next service</th><th>Pressure tested</th><th>Pressure test due</th><th>Status</th></tr></thead>
+      <thead><tr><th>Type</th><th>Serial / tag</th><th>Location</th><th>Mass (kg)</th><th>Serviced</th><th>Next service</th><th>Pressure tested</th><th>Pressure test due</th><th>Status</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="sign">
@@ -1105,23 +1151,25 @@ async function openRegister(siteId, backView){
     items = snap.docs.map(d=>({id:d.id, ...d.data()}));
   }catch(e){ toast('Could not load equipment: ' + e.message); return; }
 
-  const outstanding = items.filter(e=>e.rechargeRequired && !e.rechargeDate);
+  items.sort((a,b)=>(a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
+  const active = items.filter(e=>!e.condemned);
+  const removed = items.filter(e=>e.condemned);
+
+  const outstanding = active.filter(e=>e.rechargeRequired && !e.rechargeDate);
   if(outstanding.length){
     toast(`${outstanding.length} recharge${outstanding.length===1?'':'s'} still outstanding — clear these first`);
     return;
   }
 
-  items.sort((a,b)=>(a.location||'').localeCompare(b.location||'') || typeLabel(a.type).localeCompare(typeLabel(b.type)));
-
   const co = companySettings || {};
   const today = toLocalISO(new Date());
 
-  // Service summary — count by equipment type
+  // Service summary — count by equipment type (active items only)
   const counts = {};
-  items.forEach(e=>{ const k = typeLabel(e.type); counts[k] = (counts[k]||0) + 1; });
+  active.forEach(e=>{ const k = typeLabel(e.type); counts[k] = (counts[k]||0) + 1; });
   const summaryRows = Object.entries(counts).sort((a,b)=>a[0].localeCompare(b[0]))
     .map(([k,n])=>`<tr><td>${escapeHtml(k)}</td><td style="text-align:right;">${n}</td></tr>`).join('')
-    || `<tr><td colspan="2">No equipment recorded.</td></tr>`;
+    || `<tr><td colspan="2">No equipment in service.</td></tr>`;
   // Technician(s) who worked the site, each with their SAQCC registration no.
   const techMap = new Map();
   items.forEach(e=>{
@@ -1132,7 +1180,7 @@ async function openRegister(siteId, backView){
   const techLine = [...techMap.entries()]
     .map(([n,s])=>escapeHtml(n) + ' — ' + (s ? escapeHtml(s) : 'SAQCC no. not on file'))
     .join('<br>') || '—';
-  const rechargedCount = items.filter(e=>e.rechargeRequired && e.rechargeDate).length;
+  const rechargedCount = active.filter(e=>e.rechargeRequired && e.rechargeDate).length;
 
   const letterhead = `
     ${co.logo ? `<img class="logo" src="${co.logo}" alt="">` : ''}
@@ -1159,35 +1207,52 @@ async function openRegister(siteId, backView){
       <thead><tr><th>Equipment type</th><th style="text-align:right;">Quantity</th></tr></thead>
       <tbody>
         ${summaryRows}
-        <tr><td><strong>Total items</strong></td><td style="text-align:right;"><strong>${items.length}</strong></td></tr>
+        <tr><td><strong>Total in service</strong></td><td style="text-align:right;"><strong>${active.length}</strong></td></tr>
       </tbody>
     </table>
     <div class="hint" style="margin-top:12px;">
-      Recharges completed this service: ${rechargedCount}. All recharges on this site are cleared.
+      Recharges completed this service: ${rechargedCount}. All recharges on this site are cleared.${removed.length?` ${removed.length} item${removed.length===1?'':'s'} removed from service — listed on the last page.`:''}
     </div>
   </div>`;
 
-  const rows = items.map(e=>`<tr>
+  const rows = active.map(e=>`<tr>
     <td>${escapeHtml(typeLabel(e.type))}</td>
     <td>${escapeHtml(e.size||'')}</td>
     <td>${escapeHtml(e.serial||'')}</td>
     <td>${escapeHtml(e.location||'')}</td>
-    <td>${escapeHtml(e.mfgDate||'')}</td>
-    <td>${escapeHtml(ym(e.inspectionDate)||'—')}</td>
     <td>${escapeHtml(ym(e.serviceDate))}</td>
     <td>${escapeHtml(ym(e.nextServiceDue))}</td>
+    <td>${escapeHtml(e.serviceMass||'')}</td>
     <td>${escapeHtml(ym(e.pressureTestDate))}</td>
     <td>${escapeHtml(ym(e.pressureTestDue))}</td>
+    <td>${escapeHtml(ym(e.weightCheckDue) || ym(e.hoseReplacedDue) || '')}</td>
     <td>${escapeHtml(ym(e.rechargeDate) || (e.rechargeRequired ? 'Outstanding' : '—'))}</td>
     <td>${escapeHtml(e.inspectionDate ? statusLabel(e.status) : 'Not inspected')}</td>
-  </tr>`).join('') || `<tr><td colspan="12">No equipment recorded at this site.</td></tr>`;
+  </tr>`).join('') || `<tr><td colspan="12">No equipment in service at this site.</td></tr>`;
+
+  const removedTable = removed.length ? `
+    <h3 style="margin-top:22px;">Removed from service / condemned</h3>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Type</th><th>Size</th><th>Serial / tag</th><th>Location</th><th>Removed</th><th>Reason</th><th>Replaced by</th></tr></thead>
+      <tbody>${removed.map(e=>`<tr>
+        <td>${escapeHtml(typeLabel(e.type))}</td>
+        <td>${escapeHtml(e.size||'')}</td>
+        <td>${escapeHtml(e.serial||'')}</td>
+        <td>${escapeHtml(e.location||'')}</td>
+        <td>${escapeHtml(ym(e.condemnedDate)||'')}</td>
+        <td>${escapeHtml(e.condemnedReason||'')}</td>
+        <td>${escapeHtml(e.replacedBy||'')}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <div class="hint" style="margin-top:8px;">Condemned cylinders are indelibly marked "CONDEMNED" and returned to the owner un-assembled (SANS 1475-1 clause 5.3.6).</div>` : '';
 
   const page2 = `<div class="regpage">
     <h2 style="font-size:1rem;">Equipment Register — ${escapeHtml(site.name)}</h2>
     <div class="tablewrap"><table>
-      <thead><tr><th>Type</th><th>Size</th><th>Serial / tag</th><th>Location</th><th>Mfg</th><th>Last insp.</th><th>Serviced</th><th>Next service</th><th>Pressure tested</th><th>Pressure test due</th><th>Recharged</th><th>Status</th></tr></thead>
+      <thead><tr><th>Type</th><th>Size</th><th>Serial / tag</th><th>Location</th><th>Serviced</th><th>Next service</th><th>Mass (kg)</th><th>Pressure tested</th><th>Pressure test due</th><th>Weight / hose due</th><th>Recharged</th><th>Status</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
+    ${removedTable}
     <div class="hint" style="margin-top:14px;">Generated by Vigil Fire on ${today}. Reflects the current recorded state of each item.</div>
   </div>`;
 
@@ -1213,17 +1278,19 @@ function loadEquipmentForSite(siteId){
 
 // Bucket a piece of equipment for the site filter chips and the "Due" dashboard.
 function equipmentClass(e){
+  if(e.condemned) return 'condemned';
   if(!e.inspectionDate) return 'uninspected';
   if(e.status==='fail') return 'failed';
   if(dueStatus(e).overdue) return 'overdue';
   if(e.status==='attention') return 'attention';
   return 'ok';
 }
+function isActive(e){ return !e.condemned; }
 
 function paintEquipment(){
   const wrap = document.getElementById('equipmentList');
   const bar = document.getElementById('equipFilterBar');
-  const outstanding = equipmentCache.filter(e=>e.rechargeRequired && !e.rechargeDate).length;
+  const outstanding = equipmentCache.filter(e=>isActive(e) && e.rechargeRequired && !e.rechargeDate).length;
   const note = document.getElementById('registerBlockNote');
   if(note){
     note.style.display = (currentRole==='admin' && outstanding) ? 'block' : 'none';
@@ -1235,12 +1302,13 @@ function paintEquipment(){
     return;
   }
 
-  const counts = { all: equipmentCache.length, overdue:0, uninspected:0, failed:0 };
+  const counts = { all: equipmentCache.length, overdue:0, uninspected:0, failed:0, condemned:0 };
   equipmentCache.forEach(e=>{
     const c = equipmentClass(e);
     if(c==='overdue') counts.overdue++;
     if(c==='uninspected') counts.uninspected++;
     if(c==='failed') counts.failed++;
+    if(c==='condemned') counts.condemned++;
   });
 
   bar.style.display = equipmentCache.length >= 6 ? 'block' : 'none';
@@ -1266,6 +1334,18 @@ function paintEquipment(){
     const dueInfo = dueStatus(e);
     const inspected = !!e.inspectionDate;
     const rechargeOut = e.rechargeRequired && !e.rechargeDate;
+    if(e.condemned){
+      return `<div class="tag-card status-fail" onclick="openEquipmentForm('${e.id}')" style="opacity:0.65;">
+        <div class="tag-body">
+          <div class="type">${escapeHtml(typeLabel(e.type))} ${e.size?('· '+escapeHtml(e.size)):''}${e.make?(' · '+escapeHtml(e.make)):''}</div>
+          <div class="sub">${escapeHtml(e.location||'No location noted')}${e.serial?(' · Tag '+escapeHtml(e.serial)):''}</div>
+          <div class="pillrow">
+            <span class="pill fail">Removed from service${e.condemnedDate?(' · '+escapeHtml(ym(e.condemnedDate))):''}</span>
+            ${e.replacedBy?`<span class="pill">Replaced by ${escapeHtml(e.replacedBy)}</span>`:''}
+          </div>
+        </div>
+      </div>`;
+    }
     const statusClass = rechargeOut ? 'fail' : (!inspected ? '' : (e.status==='fail' ? 'fail' : (dueInfo.overdue ? 'due' : (e.status==='attention' ? 'due' : 'pass'))));
     return `<div class="tag-card status-${statusClass}" onclick="openEquipmentForm('${e.id}')">
       <div class="tag-body">
@@ -1278,6 +1358,8 @@ function paintEquipment(){
           ${rechargeOut ? `<span class="pill fail">Recharge required</span>` : ''}
           ${e.nextServiceDue ? `<span class="pill ${dueInfo.serviceOverdue?'due':''}">Service due ${escapeHtml(ym(e.nextServiceDue))}</span>` : ''}
           ${e.pressureTestDue ? `<span class="pill ${dueInfo.pressureOverdue?'due':''}">Pressure test ${escapeHtml(ym(e.pressureTestDue))}</span>` : ''}
+          ${e.weightCheckDue ? `<span class="pill ${dueInfo.weightOverdue?'due':''}">Weight check ${escapeHtml(ym(e.weightCheckDue))}</span>` : ''}
+          ${e.hoseReplacedDue ? `<span class="pill ${dueInfo.hoseOverdue?'due':''}">Hose due ${escapeHtml(ym(e.hoseReplacedDue))}</span>` : ''}
         </div>
       </div>
     </div>`;
@@ -1291,6 +1373,7 @@ function renderEquipFilterChips(counts){
     ['uninspected', `Not inspected ${counts.uninspected}`],
     ['failed', `Failed ${counts.failed}`]
   ];
+  if(counts.condemned) chips.push(['condemned', `Removed ${counts.condemned}`]);
   document.getElementById('equipFilterChips').innerHTML = chips.map(([k,label])=>
     `<button class="chip ${equipmentFilter===k?'active':''}" onclick="setEquipFilter('${k}')">${escapeHtml(label)}</button>`).join('');
 }
@@ -1321,6 +1404,7 @@ async function renderDueDashboard(){
 
   const flagged = [];
   items.forEach(e=>{
+    if(e.condemned) return;   // removed from service — nothing due
     const reasons = [];
     let earliest = null;
     const consider = (label, date)=>{
@@ -1333,6 +1417,8 @@ async function renderDueDashboard(){
     if(!e.inspectionDate) reasons.push({ label:'Never inspected', date:null, overdue:true });
     consider('Service due', e.nextServiceDue);
     consider('Pressure test due', e.pressureTestDue);
+    consider('CO₂ weight check due', e.weightCheckDue);
+    consider('Hose replacement due', e.hoseReplacedDue);
     if(e.status==='fail') reasons.push({ label:'Non-compliant', date:null, overdue:true });
     else if(e.status==='attention') reasons.push({ label:'Needs attention', date:null, overdue:false });
     const rechargeOut = e.rechargeRequired && !e.rechargeDate;
@@ -1387,7 +1473,10 @@ function dueStatus(e){
   const cm = thisMonth();
   const serviceOverdue = !!e.nextServiceDue && ym(e.nextServiceDue) < cm;
   const pressureOverdue = !!e.pressureTestDue && ym(e.pressureTestDue) < cm;
-  return {serviceOverdue, pressureOverdue, overdue: serviceOverdue || pressureOverdue};
+  const weightOverdue = !!e.weightCheckDue && ym(e.weightCheckDue) < cm;
+  const hoseOverdue = !!e.hoseReplacedDue && ym(e.hoseReplacedDue) < cm;
+  return {serviceOverdue, pressureOverdue, weightOverdue, hoseOverdue,
+    overdue: serviceOverdue || pressureOverdue || weightOverdue || hoseOverdue};
 }
 function typeLabel(t){ return (EQUIPMENT_TYPES[t]||{}).label || t; }
 function statusLabel(s){ return s==='fail' ? 'Non-compliant' : (s==='attention' ? 'Needs attention' : 'Compliant'); }
@@ -1395,27 +1484,31 @@ function statusLabel(s){ return s==='fail' ? 'Non-compliant' : (s==='attention' 
 /* ---------- Equipment types — single source of truth ----------
    Keys are the values stored on each equipment record. Each entry drives the
    type dropdown, the inspection checklist, the pressure-test interval and the
-   card label, so these four never drift apart again.
-   category  -> which CHECKLISTS entry to use (falls back to 'default')
-   ptYears   -> years after the last pressure test to auto-fill "pressure test due"
-                (null = no auto-fill; set manually if it applies)              */
+   card label, so these never drift apart again.
+   category           -> which CHECKLISTS entry to use (falls back to 'default')
+   ptYears            -> years after the last pressure test to auto-fill
+                         "pressure test due" (null = no auto-fill)
+   weightCheckMonths  -> interim weight-check interval (CO₂ / gas cartridge = 6)
+   hoseYears          -> hose-replacement interval for hose reels (5)
+   hasMass            -> show the "actual mass at service" field                */
 const EQUIPMENT_TYPES = {
-  '1.5kg DCP':    { label:'1.5kg DCP',      category:'default',  ptYears:5 },
-  '2kg DCP':      { label:'2kg DCP',        category:'default',  ptYears:5 },
-  '4.5kg DCP':    { label:'4.5kg DCP',      category:'default',  ptYears:5 },
-  '9kg DCP':      { label:'9kg DCP',        category:'default',  ptYears:5 },
-  '2kg CO2':      { label:'2kg CO₂',        category:'co2',      ptYears:10 },
-  '5kg CO2':      { label:'5kg CO₂',        category:'co2',      ptYears:10 },
-  '10kg CO2':     { label:'10kg CO₂',       category:'co2',      ptYears:10 },
-  '9L Water':     { label:'9L Water',       category:'default',  ptYears:5 },
-  '9L Foam':      { label:'9L Foam',        category:'default',  ptYears:5 },
-  'Lithium':      { label:'Lithium (AVD)',  category:'default',  ptYears:5 },
-  'Trolley':      { label:'Trolley unit',   category:'default',  ptYears:5 },
+  '1.5kg DCP':    { label:'1.5kg DCP',      category:'default',  ptYears:5,    hasMass:true },
+  '2kg DCP':      { label:'2kg DCP',        category:'default',  ptYears:5,    hasMass:true },
+  '4.5kg DCP':    { label:'4.5kg DCP',      category:'default',  ptYears:5,    hasMass:true },
+  '9kg DCP':      { label:'9kg DCP',        category:'default',  ptYears:5,    hasMass:true },
+  '2kg CO2':      { label:'2kg CO₂',        category:'co2',      ptYears:10,   hasMass:true, weightCheckMonths:6 },
+  '5kg CO2':      { label:'5kg CO₂',        category:'co2',      ptYears:10,   hasMass:true, weightCheckMonths:6 },
+  '10kg CO2':     { label:'10kg CO₂',       category:'co2',      ptYears:10,   hasMass:true, weightCheckMonths:6 },
+  '9L Water':     { label:'9L Water',       category:'default',  ptYears:5,    hasMass:true },
+  '9L Foam':      { label:'9L Foam',        category:'default',  ptYears:5,    hasMass:true },
+  'Lithium':      { label:'Lithium (AVD)',  category:'default',  ptYears:5,    hasMass:true },
+  'Trolley':      { label:'Trolley unit',   category:'default',  ptYears:5,    hasMass:true },
   'Hydrant':      { label:'Fire hydrant',   category:'hydrant',  ptYears:null },
-  'Hose reel':    { label:'Fire hose reel', category:'hosereel', ptYears:null },
+  'Hose reel':    { label:'Fire hose reel', category:'hosereel', ptYears:null, hoseYears:5 },
   'Siren':        { label:'Fire alarm siren', category:'siren',  ptYears:null },
   'Fire Blanket': { label:'Fire blanket',   category:'blanket',  ptYears:null }
 };
+function typeMeta(type){ return EQUIPMENT_TYPES[type] || {}; }
 function populateTypeOptions(){
   const sel = document.getElementById('eqType');
   if(!sel || sel.dataset.populated) return;
@@ -1423,7 +1516,7 @@ function populateTypeOptions(){
     .map(([code,t])=>`<option value="${escapeHtml(code)}">${escapeHtml(t.label)}</option>`).join(''));
   sel.dataset.populated = '1';
 }
-function ptYearsFor(type){ return (EQUIPMENT_TYPES[type]||{}).ptYears || null; }
+function ptYearsFor(type){ return typeMeta(type).ptYears || null; }
 function setPtHint(type){
   const y = ptYearsFor(type);
   document.getElementById('ptHint').textContent = y ? `(${y} yrs)` : '';
@@ -1431,8 +1524,8 @@ function setPtHint(type){
 
 /* ---------- Checklist definitions per category ---------- */
 const CHECKLISTS = {
-  default:[['gauge','Pressure gauge / indicator in operating (green) range'],['seal','Safety pin and tamper seal intact'],['damage','No visible damage, dents or corrosion to body'],['hose','Hose / nozzle free of cracks or blockage'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
-  co2:[['weight','Weight check within manufacturer tolerance'],['seal','Safety pin and tamper seal intact'],['damage','No visible damage, dents or corrosion to body'],['hose','Horn / nozzle free of cracks or blockage'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
+  default:[['gauge','Pressure gauge / indicator in operating (green) range'],['seal','Safety pin and tamper seal intact'],['damage','No visible damage, dents or corrosion to body'],['hose','Hose / nozzle free of cracks or blockage'],['sealsRenewed','O-rings, washers and hose diaphragm renewed as required'],['newSeal','New tamper seal and safety pin fitted'],['labelAffixed','Service label completed and affixed (org, reg. no., service date, next service, actual mass)'],['ptLabel','Pressure-test label present and legible'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
+  co2:[['weight','Weight / content check within manufacturer tolerance'],['seal','Safety pin and tamper seal intact'],['damage','No visible damage, dents or corrosion to body'],['hose','Horn / nozzle free of cracks or blockage'],['sealsRenewed','O-rings, washers and seals renewed as required'],['newSeal','New tamper seal and safety pin fitted'],['labelAffixed','Service label completed and affixed (org, reg. no., service date, next service, actual mass)'],['ptLabel','Pressure-test label present and legible'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
   hosereel:[['hose','Hose free of cracks, kinks or perishing'],['nozzle','Nozzle / valve operates freely, no leaks'],['reel','Reel winds and unwinds smoothly'],['pressure','Water pressure and flow adequate on test'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
   blanket:[['pouch','Pouch / container undamaged and sealed'],['pull','Pull tabs / release cords intact'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, correctly mounted and signed']],
   hydrant:[['valve','Isolating / landing valve opens and closes freely, no leaks'],['couplings','Outlet couplings and blank caps present and undamaged'],['damage','No visible corrosion, damage or paint deterioration'],['flow','Water pressure and flow adequate on test'],['label','Service label present, legible and up to date'],['signage','Signage present and legible'],['access','Unobstructed, accessible and correctly marked']],
@@ -1530,13 +1623,59 @@ function onPressureTestDateChange(){
   const y = ptYearsFor(currentInspectionType);
   if(d && y) document.getElementById('eqPressureTestDue').value = addYearsMonth(d, y);
 }
-// Equipment type drives the checklist and the pressure-test interval.
+// CO₂ / gas-cartridge extinguishers are re-weighed every 6 months (SANS 10105-1).
+function onWeightCheckDateChange(){
+  const d = document.getElementById('eqWeightCheckDate').value;
+  const m = typeMeta(currentInspectionType).weightCheckMonths;
+  if(d && m) document.getElementById('eqWeightCheckDue').value = addMonths(d, m);
+}
+// The hose-reel hose is replaced every 5 years.
+function onHoseReplacedDateChange(){
+  const d = document.getElementById('eqHoseReplacedDate').value;
+  const y = typeMeta(currentInspectionType).hoseYears;
+  if(d && y) document.getElementById('eqHoseReplacedDue').value = addYearsMonth(d, y);
+}
+function updateCo2Content(){
+  const s = parseFloat(document.getElementById('eqServiceMass').value);
+  const t = parseFloat(document.getElementById('eqTareMass').value);
+  const el = document.getElementById('eqCo2Content');
+  el.value = (isFinite(s) && isFinite(t)) ? (Math.round((s - t) * 1000) / 1000) + ' kg' : '';
+}
+function onCondemnedChange(){
+  const yes = document.getElementById('eqCondemned').value === 'yes';
+  document.getElementById('condemnWrap').style.display = yes ? 'block' : 'none';
+  if(yes){
+    if(!document.getElementById('eqCondemnedDate').value) document.getElementById('eqCondemnedDate').value = thisMonth();
+    if(document.getElementById('eqStatus').value !== 'fail') document.getElementById('eqStatus').value = 'fail';
+  }
+}
+// Equipment type drives which sections show and the auto-fill intervals.
+function applyTypeVisibility(type){
+  const meta = typeMeta(type);
+  document.getElementById('massSection').style.display   = meta.hasMass ? 'block' : 'none';
+  document.getElementById('co2WeightWrap').style.display = meta.weightCheckMonths ? 'block' : 'none';
+  document.getElementById('hoseReplaceWrap').style.display = meta.hoseYears ? 'block' : 'none';
+}
 function onTypeChange(){
   currentInspectionType = document.getElementById('eqType').value;
   setPtHint(currentInspectionType);
+  applyTypeVisibility(currentInspectionType);
   renderChecklist(currentInspectionType);
   onPressureTestDateChange();
+  onWeightCheckDateChange();
+  onHoseReplacedDateChange();
 }
+
+/* Condemning criteria — SANS 1475-1 clause 5.2.6 */
+const CONDEMN_CRITERIA = [
+  ['repair','Cylinder repaired by soldering, brazing, welding or patching'],
+  ['threads','Damaged, worn or corroded cylinder / valve screw threads'],
+  ['corrosion','Excessive corrosion, pitting, denting or physical damage'],
+  ['fire','Cylinder has been exposed to fire'],
+  ['markings','Unauthorised markings, modifications or non-approved parts'],
+  ['spec','Cannot be maintained to the manufacturer’s specification'],
+  ['obsolete','Obsolete / withdrawn type (e.g. halon) or beyond serviceable life']
+];
 
 /* ---------- Equipment form — identity + current inspection, all in one ---------- */
 let currentPhotoDataUrl = null;   // new photo pending upload
@@ -1587,6 +1726,22 @@ async function openEquipmentForm(id){
   document.getElementById('eqStatus').value            = e ? (e.status||'pass')     : 'pass';
   document.getElementById('eqNotes').value             = e ? (e.notes||'')            : '';
   currentChecklistValues = Object.assign({}, (e && e.checklist) || {});
+
+  // Mass & weight check
+  document.getElementById('eqServiceMass').value      = e ? (e.serviceMass||'')     : '';
+  document.getElementById('eqTareMass').value         = e ? (e.tareMass||'')        : '';
+  document.getElementById('eqWeightCheckDate').value  = e ? ym(e.weightCheckDate)   : '';
+  document.getElementById('eqWeightCheckDue').value   = e ? ym(e.weightCheckDue)    : '';
+  updateCo2Content();
+  // Hose-reel replacement
+  document.getElementById('eqHoseReplacedDate').value = e ? ym(e.hoseReplacedDate)  : '';
+  document.getElementById('eqHoseReplacedDue').value  = e ? ym(e.hoseReplacedDue)   : '';
+  // Condemn / removed from service
+  document.getElementById('eqCondemned').value        = (e && e.condemned) ? 'yes' : 'no';
+  document.getElementById('eqCondemnedDate').value    = e ? ym(e.condemnedDate)     : '';
+  document.getElementById('eqCondemnedReason').value  = e ? (e.condemnedReason||'') : '';
+  document.getElementById('eqReplacedBy').value       = e ? (e.replacedBy||'')      : '';
+  renderCheckboxList('condemnChecklistWrap', CONDEMN_CRITERIA, (e && e.condemnedCriteria) || {});
   if(e && e.photoURL){
     currentPhotoURL = e.photoURL;
     const p = document.getElementById('eqPhotoPreview');
@@ -1623,7 +1778,9 @@ async function openEquipmentForm(id){
   document.getElementById('eqTechDisplay').textContent = techName + (techSaqcc ? (' · ' + techSaqcc) : '');
 
   setPtHint(currentInspectionType);
+  applyTypeVisibility(currentInspectionType);
   renderChecklist(currentInspectionType);
+  onCondemnedChange();
   showView('view-equipment-form');
 }
 
@@ -1648,6 +1805,8 @@ async function saveEquipment(){
 
   const rechargeRequired = document.getElementById('eqRechargeReq').value === 'yes';
   const ptPerformed = document.getElementById('eqPtPerformed').value === 'yes';
+  const condemned = document.getElementById('eqCondemned').value === 'yes';
+  const meta = typeMeta(type);
   const inspectionDate = document.getElementById('eqInspDate').value || null;
   const val = id => document.getElementById(id).value.trim();
   const payload = {
@@ -1663,9 +1822,23 @@ async function saveEquipment(){
     pressureTestDate: document.getElementById('eqPressureTestDate').value || null,
     pressureTestDue: document.getElementById('eqPressureTestDue').value || null,
     checklist: currentChecklistValues,
-    status: document.getElementById('eqStatus').value,
+    status: condemned ? 'fail' : document.getElementById('eqStatus').value,
     notes: document.getElementById('eqNotes').value.trim(),
     photoURL: photoURL || null,
+    // Mass & weight check
+    serviceMass: meta.hasMass ? val('eqServiceMass') : '',
+    tareMass: meta.weightCheckMonths ? val('eqTareMass') : '',
+    weightCheckDate: meta.weightCheckMonths ? (document.getElementById('eqWeightCheckDate').value || null) : null,
+    weightCheckDue: meta.weightCheckMonths ? (document.getElementById('eqWeightCheckDue').value || null) : null,
+    // Hose-reel hose replacement
+    hoseReplacedDate: meta.hoseYears ? (document.getElementById('eqHoseReplacedDate').value || null) : null,
+    hoseReplacedDue: meta.hoseYears ? (document.getElementById('eqHoseReplacedDue').value || null) : null,
+    // Removed from service / condemned (SANS 1475-1 clause 5.2.6 / 5.3.6)
+    condemned,
+    condemnedDate: condemned ? (document.getElementById('eqCondemnedDate').value || null) : null,
+    condemnedReason: condemned ? val('eqCondemnedReason') : '',
+    condemnedCriteria: condemned ? collectCheckboxList('condemnChecklistWrap') : {},
+    replacedBy: condemned ? val('eqReplacedBy') : '',
     rechargeRequired,
     rechargeDate: rechargeRequired ? (document.getElementById('eqRechargeDate').value || null) : null,
     // Pressure test (hydrostatic) — captured when performed this service
@@ -1969,6 +2142,7 @@ async function openPressureTestReport(){
     <div class="kv"><span class="k">New pressure test</span><span class="v">${escapeHtml(ym(e.pressureTestDate)||'—')}</span></div>
     <div class="kv"><span class="k">Next test due</span><span class="v">${escapeHtml(ym(e.pressureTestDue)||'—')}</span></div>
     <div class="kv"><span class="k">Test pressure</span><span class="v">${escapeHtml(e.ptTestPressure||'—')}${e.ptTestPressure?' kPa':''}</span></div>
+    ${e.serviceMass?`<div class="kv"><span class="k">Mass after service</span><span class="v">${escapeHtml(e.serviceMass)} kg</span></div>`:''}
     <div class="kv"><span class="k">Result</span><span class="v">${e.ptResult==='fail'?'Failed / condemned':'Passed'}</span></div>
     <div class="kv"><span class="k">Tested by</span><span class="v">${escapeHtml(e.ptTechnicianName||'—')}${e.ptTechnicianSaqcc?(' — '+escapeHtml(e.ptTechnicianSaqcc)):''}</span></div>
     ${e.ptNotes?`<div class="kv"><span class="k">Notes</span><span class="v">${escapeHtml(e.ptNotes)}</span></div>`:''}
@@ -2011,6 +2185,7 @@ async function openRechargeReport(){
     <div class="kv"><span class="k">Recharged</span><span class="v">${escapeHtml(ym(e.rechargeDate)||'—')}</span></div>
     <div class="kv"><span class="k">Extinguishing medium</span><span class="v">${escapeHtml(e.rechargeMedium||'—')}</span></div>
     <div class="kv"><span class="k">Pressure before → after</span><span class="v">${escapeHtml(e.rechargePressureBefore||'—')} → ${escapeHtml(e.rechargePressureAfter||'—')} kPa</span></div>
+    ${e.serviceMass?`<div class="kv"><span class="k">Mass after recharge</span><span class="v">${escapeHtml(e.serviceMass)} kg</span></div>`:''}
     <div class="kv"><span class="k">Recharged by</span><span class="v">${escapeHtml(e.rechargeTechnicianName||'—')}${e.rechargeTechnicianSaqcc?(' — '+escapeHtml(e.rechargeTechnicianSaqcc)):''}</span></div>
     ${e.rechargeNotes?`<div class="kv"><span class="k">Notes</span><span class="v">${escapeHtml(e.rechargeNotes)}</span></div>`:''}
     <div class="rep-check"><strong>Checklist — SANS 1475</strong>${checklistUL(RC_CHECKLIST, e.rechargeChecklist)}</div>
